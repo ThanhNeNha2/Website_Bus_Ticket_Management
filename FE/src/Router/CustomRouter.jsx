@@ -5,6 +5,8 @@ import MainLayout from "../Layouts/MainLayout";
 import Introduce from "../Pages/Introduce/Introduce";
 import ListRoutertrip from "../Pages/ListRoutertrip/ListRoutertrip";
 import News from "../Pages/News/News";
+import AdminLayout from "../Layouts/AdminLayout";
+import InfoTicket from "../Components/Admin/InfoTicket";
 
 const CustomRouter = () => {
   return (
@@ -17,6 +19,10 @@ const CustomRouter = () => {
         <Route path="/news" element={<News />} />
       </Route>
 
+      {/* ADMIN  */}
+      <Route element={<AdminLayout />}>
+        <Route path="/admin/ticket" element={<InfoTicket />} />
+      </Route>
       {/* Trang không dùng layout */}
       <Route path="/login" element={<Login />} />
     </Routes>
