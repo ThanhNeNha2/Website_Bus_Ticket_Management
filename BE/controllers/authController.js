@@ -6,7 +6,7 @@ var refreshTokens = [];
 
 const registerUser = async (req, res) => {
   try {
-    const { username, email, password, phone } = req.body;
+    const { username, email, password, phone, role } = req.body;
 
     // Kiểm tra dữ liệu đầu vào
     if (!username || !email || !password || !phone) {
@@ -66,6 +66,7 @@ const registerUser = async (req, res) => {
       email,
       password: hashed,
       phone,
+      role,
     });
 
     // Trả về phản hồi
@@ -75,6 +76,7 @@ const registerUser = async (req, res) => {
         username: user.username,
         email: user.email,
         phone: user.phone,
+        role: user.role,
       },
     });
   } catch (error) {
