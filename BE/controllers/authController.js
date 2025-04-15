@@ -90,7 +90,7 @@ let generateAccessToken = (user) => {
   return jwt.sign(
     {
       id: user.id,
-      admin: user.admin,
+      role: user.role,
     },
     process.env.JWT_ACCESS_KEY,
     {
@@ -104,7 +104,7 @@ let generateRefreshToken = (user) => {
   return jwt.sign(
     {
       id: user.id,
-      admin: user.admin,
+      role: user.role,
     },
     process.env.JWT_REFRESH_KEY,
     {
