@@ -23,11 +23,7 @@ router.get("/cars/:id", verifyToken, getCarById);
 router.get("/cars", verifyToken, getAllCars);
 
 // Route: Cập nhật xe
-router.put(
-  "/cars/:id",
-  verifyTokenAndRoleAndID(["ADMIN", "GARAGE"]),
-  updateCar
-);
+router.put("/cars/:id", verifyTokenAndRoleAuth(["GARAGE"]), updateCar);
 
 // Route: Xóa xe ( chỉ có ADMIN VÀ GARAGE mới xóa được xe - đã check id )
 router.delete(

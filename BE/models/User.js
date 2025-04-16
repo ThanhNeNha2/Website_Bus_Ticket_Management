@@ -21,14 +21,25 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
     },
     phone: {
-      type: String,
+      type: Number,
       required: true,
       maxlength: 12,
       minlength: 8,
       unique: true,
     },
+    address: {
+      type: String,
+      minlength: 6,
+    },
+    image: {
+      type: String,
+    },
+    description: {
+      type: String,
+    },
     role: {
       type: String,
+      enum: ["USER", "ADMIN", "GARAGE"],
       default: "USER",
     },
   },

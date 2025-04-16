@@ -118,14 +118,7 @@ const updateCar = async (req, res) => {
       req.body;
 
     // Kiểm tra dữ liệu đầu vào
-    if (
-      !nameCar &&
-      !licensePlate &&
-      !features &&
-      !seats &&
-      !vehicleTypeId &&
-      !image
-    ) {
+    if (!nameCar && !licensePlate && !features && !seats && !vehicleTypeId) {
       return res.status(400).json({
         errCode: 1,
         message: "No fields provided for update",
@@ -154,6 +147,39 @@ const updateCar = async (req, res) => {
     if (seats) updateFields.seats = seats;
     if (vehicleTypeId) updateFields.vehicleTypeId = vehicleTypeId;
     if (image) updateFields.image = image;
+
+    // Check xem người dùng có quyền xóa không
+
+    const user = req.user; // Lấy thông tin user từ middleware
+
+    // Kiểm tra thông tin user
+    if (!user || !user.id || !user.role) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "Không có thông tin người dùng hoặc vai trò",
+      });
+    }
+
+    // Tìm xe theo ID
+    const carSearch = await Car.findById(carId);
+
+    if (!carSearch) {
+      return res.status(404).json({
+        errCode: 1,
+        message: "Car not found",
+      });
+    }
+
+    // Kiểm tra quyền xóa
+    const isOwner = carSearch.userId.toString() === user.id; // So sánh userId của xe với req.user.id
+    const hasPermission = user.role === "GARAGE";
+
+    if (!isOwner && !hasPermission) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "Bạn không có quyền xóa xe này",
+      });
+    }
 
     // Cập nhật xe
     const car = await Car.findByIdAndUpdate(
