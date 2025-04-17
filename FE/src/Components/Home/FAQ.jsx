@@ -2,15 +2,15 @@ import React from "react";
 
 const FAQ = () => {
   return (
-    <div className="bg-black text-white py-12">
+    <div className="bg-black text-white py-12 px-52">
       <div className="container mx-auto">
         {/* Tiêu đề */}
-        <h2 className="text-3xl font-bold text-center mb-8">
+        <h2 className="text-3xl font-bold text-center mb-11">
           Câu hỏi thường gặp
         </h2>
 
         {/* Grid cho các câu hỏi */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-14">
           {/* Câu hỏi 1 */}
           <div>
             <h3 className="text-xl font-semibold mb-2">
