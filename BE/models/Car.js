@@ -14,7 +14,8 @@ const carSchema = new mongoose.Schema(
     },
     // Tiên ích xe
     features: {
-      type: [String], // Ví dụ: ["WiFi", "AC", "Charger"]
+      type: [String],
+      enum: ["WiFi", "AC", "Charger", "TV"],
       default: [],
     },
     // chỗ ngồi
@@ -24,6 +25,7 @@ const carSchema = new mongoose.Schema(
     },
     vehicleTypeId: {
       type: String,
+      enum: ["SIT", "BED", "LIMO"],
       default: "SIT",
     },
     image: {
