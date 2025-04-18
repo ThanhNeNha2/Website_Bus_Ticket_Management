@@ -2,7 +2,7 @@ import React from "react";
 
 const TicketPricing = () => {
   return (
-    <div className="bg-black text-white py-12">
+    <div className="bg-black text-white py-12 px-10">
       <div className="container mx-auto">
         {/* Tiêu đề */}
         <h2 className="text-3xl font-bold text-center mb-8">

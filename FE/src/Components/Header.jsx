@@ -1,53 +1,103 @@
-import React from "react";
+import React, { useState } from "react";
 import logo from "../images/Logo1.png";
+import { Link } from "react-router-dom";
 
 const Header = () => {
+  const user = {
+    image:
+      "https://i.pinimg.com/736x/3c/ae/07/3cae079ca0b9e55ec6bfc1b358c9b1e2.jpg",
+    name: "thanh",
+  };
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   return (
-    <nav className="bg-black text-white   fixed top-0 right-0 left-0 z-[999]  px-4 border-b border-gray-600">
+    <nav className="bg-black text-white fixed top-0 right-0 left-0 z-[999] px-4 border-b border-gray-600">
       <div className="container mx-auto flex justify-between items-center">
         {/* Logo/Title */}
-        <div className="text-lg font-bold w-[60px] h-[60px]">
-          {/* Vé Xe Toàn Quốc */}
-          <img src={logo} alt="Logo" className="  object-cover" />
-        </div>
+        <Link to="/">
+          <div className="text-lg font-bold w-[60px] h-[60px]">
+            <img src={logo} alt="Logo" className="object-cover" />
+          </div>
+        </Link>
 
         {/* Menu Items */}
-        <ul className="flex space-x-6">
+        <ul className="flex space-x-6 items-center">
           <li>
-            <a href="#" className="hover:text-gray-300">
+            <Link to="/" className="hover:text-gray-300">
               Trang chủ
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#" className="hover:text-gray-300">
+            <Link to="/introduce" className="hover:text-gray-300">
               Giới thiệu
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#" className="hover:text-gray-300">
+            <Link to="/ListRoutertrip" className="hover:text-gray-300">
               Tuyến xe
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#" className="hover:text-gray-300">
-              Đăng nhập
-            </a>
-          </li>
-          <li>
-            <a href="#" className="hover:text-gray-300">
+            <Link to="/contact" className="hover:text-gray-300">
               Liên hệ
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="#" className="hover:text-gray-300">
-              Tuyển đặc biệt
-            </a>
+            <Link to="/special-routes" className="hover:text-gray-300">
+              Tuyến đặc biệt
+            </Link>
           </li>
           <li>
-            <a href="#" className="hover:text-gray-300">
+            <Link to="/news" className="hover:text-gray-300">
               Tin tức
-            </a>
+            </Link>
           </li>
+          {user ? (
+            <li className="relative">
+              <div
+                className="flex items-center space-x-2 cursor-pointer"
+                onMouseEnter={() => setIsDropdownOpen(true)}
+              >
+                <img
+                  src={user.image}
+                  alt="User"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                <span className="hover:text-gray-300">{user.name}</span>
+              </div>
+              {isDropdownOpen && (
+                <ul
+                  className="absolute top-full right-0 mt-2 w-48 bg-black border border-gray-600 rounded-md shadow-lg"
+                  onMouseEnter={() => setIsDropdownOpen(true)}
+                  onMouseLeave={() => setIsDropdownOpen(false)}
+                >
+                  <li>
+                    <Link
+                      to="/account"
+                      className="block px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
+                    >
+                      Thông tin tài khoản
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/logout"
+                      className="block px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
+                    >
+                      Đăng xuất
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </li>
+          ) : (
+            <li>
+              <Link to="/login" className="hover:text-gray-300">
+                Đăng nhập
+              </Link>
+            </li>
+          )}
         </ul>
       </div>
     </nav>

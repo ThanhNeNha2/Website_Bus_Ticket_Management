@@ -12,7 +12,7 @@ const Banner = () => {
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
 
       {/* Nội dung banner */}
-      <div className="relative container mx-auto h-full flex flex-col justify-center items-start p-6">
+      <div className="relative container mx-auto h-full flex flex-col justify-center items-start py-6 px-10">
         <h1 className="text-4xl font-bold text-white mb-2">
           Đặt Vé Xe Nhanh Chóng, Dễ Dàng
         </h1>

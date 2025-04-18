@@ -1,34 +1,13 @@
 import React, { useState } from "react";
 import login from "../../images/karavan-1.jpg";
 import { FaEyeSlash, FaEye } from "react-icons/fa";
-import { Link } from "react-router-dom";
-
-const Login = () => {
-  const [infoLogin, setInfoLogin] = useState({
-    email: "",
-    password: "",
-  });
+const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
-
-  // Check if all fields are filled
-  const isFormValid =
-    infoLogin.email.trim() !== "" && infoLogin.password.trim() !== "";
-
-  // Handle input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setInfoLogin((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   return (
     <div className="pt-14 h-screen flex ">
       <div className="flex-1">
         <div className="h-full flex items-center justify-center bg-gradient-to-r bg-gray-200 p-4">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8 relative">
-            {/* Avatar placeholder */}
             <div className="w-12 h-12 bg-gray-300 rounded-full mx-auto mb-4 overflow-hidden">
               <img
                 src="https://i.pinimg.com/736x/3c/ae/07/3cae079ca0b9e55ec6bfc1b358c9b1e2.jpg"
@@ -38,16 +17,27 @@ const Login = () => {
             </div>
 
             {/* Title */}
-            <h2 className="text-center text-2xl font-semibold">Đăng nhập </h2>
-            <p className="text-center text-sm text-gray-500 py-5 ">
-              Bạn chưa có tài khoản?
-              <Link
-                to={"/register"}
-                className="text-black underline font-medium ml-2"
-              >
-                Đăng ký
-              </Link>
+            <h2 className="text-center text-2xl font-semibold">
+              Create an account
+            </h2>
+            <p className="text-center text-sm text-gray-500">
+              Already have an account?{" "}
+              <a href="#" className="text-black underline font-medium">
+                Log in
+              </a>
             </p>
+
+            {/* Account type */}
+            <div className="flex justify-center gap-6 my-6 text-sm">
+              <label className="flex items-center gap-1">
+                <input type="radio" name="type" defaultChecked />
+                <span>Người dùng </span>
+              </label>
+              <label className="flex items-center gap-1">
+                <input type="radio" name="type" />
+                <span>Nhà xe</span>
+              </label>
+            </div>
 
             {/* Form */}
             <form className="space-y-4">
@@ -57,9 +47,6 @@ const Login = () => {
                 </label>
                 <input
                   type="email"
-                  name="email"
-                  value={infoLogin.email}
-                  onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>
@@ -70,29 +57,36 @@ const Login = () => {
                 </label>
                 <input
                   type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={infoLogin.password}
-                  onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 <button
-                  onClick={() => setShowPassword(!showPassword)}
                   type="button"
+                  onClick={() => setShowPassword(!showPassword)}
                   className="absolute top-8 right-3 text-gray-500"
                 >
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
 
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">
+                  Country of residence
+                </label>
+                <select className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <option>Vietnam</option>
+                  <option>United States</option>
+                  <option>Canada</option>
+                  <option>Others</option>
+                </select>
+              </div>
+
               {/* Submit button */}
               <button
                 type="submit"
-                className={`w-full text-white py-2 rounded-full ${
-                  isFormValid ? "bg-orange-400" : "bg-gray-300"
-                }`}
-                disabled={!isFormValid}
+                className="w-full bg-gray-300 text-white py-2 rounded-full cursor-not-allowed"
+                disabled
               >
-                Đăng nhập
+                Create an account
               </button>
             </form>
 
@@ -117,4 +111,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
