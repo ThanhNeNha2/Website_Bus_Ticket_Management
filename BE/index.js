@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const authRouter = require("./routes/auth");
 const userRouter = require("./routes/user");
 const carRouter = require("./routes/car");
+const tripRouter = require("./routes/trip");
 
 dotenv.config();
 const app = express();
@@ -33,6 +34,7 @@ app.use(
 app.use("/v1/auth", authRouter);
 app.use("/v1/user", userRouter);
 app.use("/v1", carRouter);
+app.use("/v1", tripRouter);
 
 app.listen(8080, () => {
   console.log("Server is running");

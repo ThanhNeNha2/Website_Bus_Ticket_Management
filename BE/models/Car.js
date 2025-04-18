@@ -15,7 +15,7 @@ const carSchema = new mongoose.Schema(
     // Tiên ích xe
     features: {
       type: [String],
-      enum: ["WiFi", "AC", "Charger", "TV"],
+      enum: ["WiFi", "Cung cấp nước suối miễn phí", "Charger", "TV"],
       default: [],
     },
     // chỗ ngồi
