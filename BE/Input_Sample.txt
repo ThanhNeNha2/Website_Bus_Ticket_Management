@@ -1,0 +1,18 @@
+**** TRIP ****
+{
+  "pickupPoint": "Bến xe Miền Đông",
+  "dropOffPoint": "Bến xe Miền Tây",
+  "ticketPrice": 200000,
+  "departureTime": "2025-05-01T08:00:00Z",
+  "arrivalTime": "2025-05-01T12:00:00Z",
+  "departureDate": "2025-05-01",
+  "arrivalDate": "2025-05-01",
+  "carId": "67feb9a84daa21450ca88a2d",
+  "status": "Scheduled"
+}
+
+**** TICKET ****
+{
+  "tripId": "609d5e8c9f7d4b2c3c8f9a3c",
+  "ticketPrice": 200000
+}
