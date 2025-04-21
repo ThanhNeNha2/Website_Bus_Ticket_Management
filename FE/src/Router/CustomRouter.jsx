@@ -10,6 +10,8 @@ import InfoTicket from "../Components/Admin/InfoTicket";
 import Register from "../Pages/Register/Register";
 import ClientLayout from "../Layouts/ClientLayout";
 import InfoUser from "../Components/InfoUser";
+import InfoTrip from "../Components/Admin/InfoTrip";
+import InfoCar from "../Components/Admin/InfoCar";
 
 const CustomRouter = () => {
   return (
@@ -26,8 +28,10 @@ const CustomRouter = () => {
 
       {/* ADMIN  */}
       <Route element={<AdminLayout />}>
-        <Route path="/admin/ticket" element={<InfoTicket />} />
-        <Route path="/admin/info" element={<InfoUser />} />
+        <Route path="/admin/ticket-management" element={<InfoTicket />} />
+        <Route path="/admin/trip-management" element={<InfoTrip />} />
+        <Route path="/admin/user-management" element={<InfoUser />} />
+        <Route path="/admin/vehicle-management" element={<InfoCar />} />
       </Route>
 
       {/* CLIENT */}

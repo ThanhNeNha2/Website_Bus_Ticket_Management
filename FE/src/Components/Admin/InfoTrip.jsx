@@ -1,6 +1,6 @@
 import React from "react";
 
-const InfoTicket = () => {
+const InfoTrip = () => {
   return (
     <div className="flex-1 p-6 bg-gray-50">
       {/* Tiêu đề */}
@@ -11,9 +11,10 @@ const InfoTicket = () => {
           <thead>
             <tr className="bg-gray-100">
               <th className="py-2 px-4 border-b text-left">Thông tin xe</th>
-              <th className="py-2 px-4 border-b text-left">Khách đặt vé</th>
-              <th className="py-2 px-4 border-b text-left">Điểm đón/Trả</th>
+              <th className="py-2 px-4 border-b text-left">Điểm đón khách </th>
+              <th className="py-2 px-4 border-b text-left">Điểm trả khách </th>
               <th className="py-2 px-4 border-b text-left">Ngày đi</th>
+              <th className="py-2 px-4 border-b text-left">Giờ đi</th>
               <th className="py-2 px-4 border-b text-left">Trạng thái</th>
             </tr>
           </thead>
@@ -31,4 +32,4 @@ const InfoTicket = () => {
   );
 };
 
-export default InfoTicket;
+export default InfoTrip;

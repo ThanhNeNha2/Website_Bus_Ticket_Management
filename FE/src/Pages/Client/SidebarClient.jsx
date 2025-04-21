@@ -5,10 +5,10 @@ import { GiLovers } from "react-icons/gi";
 import { IoTicketOutline } from "react-icons/io5";
 import { MdOutlineDescription } from "react-icons/md";
 import { TbLogout2 } from "react-icons/tb";
+import { Link } from "react-router-dom";
 
 const SidebarClient = () => {
-  const [activeItem, setActiveItem] = useState(null);
-
+  const [activeItem, setActiveItem] = useState("Thông tin tài khoản");
   const handleItemClick = (item) => {
     setActiveItem(item);
   };
@@ -80,7 +80,9 @@ const SidebarClient = () => {
           onClick={() => handleItemClick("Đăng xuất")}
         >
           <TbLogout2 />
-          <span>Đăng xuất</span>
+          <Link to={"/login"}>
+            <span>Đăng xuất</span>
+          </Link>
         </li>
       </ul>
     </div>

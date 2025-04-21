@@ -74,7 +74,7 @@ const Header = () => {
                 >
                   <li>
                     <Link
-                      to="/account"
+                      to="/info"
                       className="block px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
                     >
                       Thông tin tài khoản
@@ -82,7 +82,7 @@ const Header = () => {
                   </li>
                   <li>
                     <Link
-                      to="/logout"
+                      to="/login"
                       className="block px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
                     >
                       Đăng xuất
