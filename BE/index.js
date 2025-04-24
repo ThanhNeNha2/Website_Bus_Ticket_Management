@@ -7,6 +7,8 @@ const authRouter = require("./routes/auth");
 const userRouter = require("./routes/user");
 const carRouter = require("./routes/car");
 const tripRouter = require("./routes/trip");
+const ticketRouter = require("./routes/ticket");
+const promotionRouter = require("./routes/promotion");
 
 dotenv.config();
 const app = express();
@@ -35,6 +37,8 @@ app.use("/v1/auth", authRouter);
 app.use("/v1/user", userRouter);
 app.use("/v1", carRouter);
 app.use("/v1", tripRouter);
+app.use("/v1", ticketRouter);
+app.use("/v1", promotionRouter);
 
 app.listen(8080, () => {
   console.log("Server is running");

@@ -7,6 +7,7 @@ var refreshTokens = [];
 const registerUser = async (req, res) => {
   try {
     const { username, email, password, phone, role } = req.body;
+    // console.log(" check thong tin ", username, email, password, phone, role);
 
     // Kiểm tra dữ liệu đầu vào
     if (!username || !email || !password || !phone) {
@@ -36,12 +37,12 @@ const registerUser = async (req, res) => {
       $or: [{ username }, { phone }, { email }],
     });
     if (existingUser) {
-      if (existingUser.username === username) {
-        return res.status(400).json({
-          errCode: 1,
-          message: "Username already exists",
-        });
-      }
+      // if (existingUser.username === username) {
+      //   return res.status(400).json({
+      //     errCode: 1,
+      //     message: "Username already exists",
+      //   });
+      // }
       if (existingUser.phone === phone) {
         return res.status(400).json({
           errCode: 1,
@@ -118,9 +119,9 @@ let generateRefreshToken = (user) => {
 
 let loginUser = async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.body.username });
+    const user = await User.findOne({ email: req.body.email });
     if (!user) {
-      return res.status(404).json("Wrong username");
+      return res.status(404).json("Wrong email");
     }
     const validatePassword = await bcrypt.compare(
       req.body.password,

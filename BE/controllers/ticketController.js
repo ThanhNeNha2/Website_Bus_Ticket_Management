@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 // Create a new ticket
 const createTicket = async (req, res) => {
   try {
-    const { tripId, ticketPrice } = req.body;
+    const { tripId, ticketPrice, promotionCode } = req.body;
     const user = req.user; // Giả định req.user từ middleware xác thực
 
     // Kiểm tra dữ liệu đầu vào
@@ -52,13 +52,71 @@ const createTicket = async (req, res) => {
       });
     }
 
+    // Xử lý mã giảm giá
+    let finalTicketPrice = ticketPrice;
+    let appliedPromotion = null;
+    if (promotionCode) {
+      const promotion = await Promotion.findOne({ code: promotionCode });
+      if (!promotion) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid promotion code",
+        });
+      }
+
+      // Kiểm tra trạng thái và thời gian hiệu lực
+      const now = new Date();
+      if (
+        promotion.status !== "Active" ||
+        now < promotion.startDate ||
+        now > promotion.endDate
+      ) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Promotion is not active or has expired",
+        });
+      }
+
+      // Kiểm tra maxUses
+      if (promotion.maxUses > 0 && promotion.usedCount >= promotion.maxUses) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Promotion has reached maximum usage",
+        });
+      }
+
+      // Kiểm tra applicableTrips
+      if (
+        promotion.applicableTrips.length > 0 &&
+        !promotion.applicableTrips.includes(tripId)
+      ) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Promotion is not applicable to this trip",
+        });
+      }
+
+      // Tính giá vé sau giảm giá
+      if (promotion.discountType === "Percentage") {
+        finalTicketPrice = ticketPrice * (1 - promotion.discountValue / 100);
+      } else if (promotion.discountType === "Fixed") {
+        finalTicketPrice = ticketPrice - promotion.discountValue;
+        if (finalTicketPrice < 0) finalTicketPrice = 0; // Đảm bảo giá không âm
+      }
+
+      // Tăng usedCount
+      promotion.usedCount += 1;
+      await promotion.save();
+      appliedPromotion = promotion;
+    }
+
     // Tạo ticket mới
     const ticket = new Ticket({
-      ticketCode: `TICKET-${uuidv4().slice(0, 8)}`, // Mã vé duy nhất
+      ticketCode: `TICKET-${uuidv4().slice(0, 8)}`,
       tripId,
       carId: trip.carId,
       userId: user.id,
-      ticketPrice: ticketPrice || trip.ticketPrice,
+      ticketPrice: finalTicketPrice,
       status: "Booked",
     });
 
@@ -79,6 +137,13 @@ const createTicket = async (req, res) => {
       errCode: 0,
       message: "Ticket created successfully",
       ticket: populatedTicket,
+      appliedPromotion: appliedPromotion
+        ? {
+            code: appliedPromotion.code,
+            discountType: appliedPromotion.discountType,
+            discountValue: appliedPromotion.discountValue,
+          }
+        : null,
     });
   } catch (error) {
     console.error("Error creating ticket:", error);

@@ -16,3 +16,16 @@
   "tripId": "609d5e8c9f7d4b2c3c8f9a3c",
   "ticketPrice": 200000
 }
+
+**** PROMOTION **** 
+{
+  "code": "SUMMER2025",
+  "description": "Giảm giá mùa hè",
+  "discountType": "Percentage",
+  "discountValue": 10,
+  "startDate": "2025-06-01",
+  "endDate": "2025-08-31",
+  "applicableTrips": ["609d5e8c9f7d4b2c3c8f9a3c"],
+  "maxUses": 100,
+  "status": "Active"
+}
