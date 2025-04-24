@@ -62,9 +62,9 @@ const Login = () => {
         // Redirect based on role
         const role = res.data.role;
         if (role === "GARAGE") {
-          navigate("/admin/trip");
+          navigate("/admin/ticket-management");
         } else {
-          navigate("/admin/ticket");
+          navigate("/");
         }
       }
     } catch (error) {

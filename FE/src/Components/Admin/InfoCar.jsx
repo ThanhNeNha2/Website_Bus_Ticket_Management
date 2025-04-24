@@ -1,9 +1,62 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../Util/axios";
+import UpdateInfoCar from "./Car/UpdateInfoCar";
+
+// Hàm gọi API để lấy danh sách xe
+const fetchCars = async () => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    throw new Error("Không có token. Vui lòng đăng nhập lại.");
+  }
+  const res = await api.get("/cars");
+  if (res.data.errCode !== 0) {
+    throw new Error(res.data.message || "Không thể tải danh sách xe.");
+  }
+  return res.data.data.cars || [];
+};
+
+// Hàm gọi API để thêm xe
+const addCar = async (newCar) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    throw new Error("Không có token. Vui lòng đăng nhập lại.");
+  }
+  const res = await api.post("/cars", newCar);
+  if (res.data.errCode !== 0) {
+    throw new Error(res.data.message || "Không thể thêm xe.");
+  }
+  return res.data.data;
+};
+
+// Hàm gọi API để sửa xe
+const editCar = async ({ carId, updatedCar }) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    throw new Error("Không có token. Vui lòng đăng nhập lại.");
+  }
+  const res = await api.put(`/cars/${carId}`, updatedCar);
+  if (res.data.errCode !== 0) {
+    throw new Error(res.data.message || "Không thể sửa xe.");
+  }
+  return res.data.data;
+};
+
+// Hàm gọi API để xóa xe
+const deleteCar = async (carId) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) {
+    throw new Error("Không có token. Vui lòng đăng nhập lại.");
+  }
+  const res = await api.delete(`/cars/${carId}`);
+  if (res.data.errCode !== 0) {
+    throw new Error(res.data.message || "Không thể xóa xe.");
+  }
+  return carId;
+};
 
 const InfoCar = () => {
-  const [cars, setCars] = useState([]);
-  const loading = false;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentCar, setCurrentCar] = useState(null);
@@ -15,49 +68,131 @@ const InfoCar = () => {
     username: "",
     email: "",
   });
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const res = api.get("/cars");
-    console.log(res);
-  }, []);
+  // Query để lấy danh sách xe
+  const {
+    data: cars = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["cars"],
+    queryFn: fetchCars,
+    onError: (err) => {
+      if (err.message.includes("Không có token")) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        navigate("/login");
+      }
+    },
+  });
 
-  const handleAddCar = async (e) => {
-    e.preventDefault();
-  };
+  // Mutation để thêm xe
+  const addCarMutation = useMutation({
+    mutationFn: addCar,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["cars"]); // Làm mới danh sách xe
+      setIsAddModalOpen(false);
+      resetForm();
+    },
+    onError: (err) => {
+      if (err.message.includes("Không có token")) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        navigate("/login");
+      }
+    },
+  });
 
-  const handleEditCar = async (e) => {
-    e.preventDefault();
-    try {
-      const updatedCar = {
-        ...currentCar,
-        nameCar: formData.nameCar,
-        licensePlate: formData.licensePlate,
-        seats: parseInt(formData.seats),
-        vehicleTypeId: formData.vehicleTypeId,
-        userId: {
-          ...currentCar.userId,
-          username: formData.username,
-          email: formData.email,
-        },
-        updatedAt: new Date().toISOString(),
-      };
-      setCars(
-        cars.map((car) => (car._id === currentCar._id ? updatedCar : car))
+  // Mutation để sửa xe
+  const editCarMutation = useMutation({
+    mutationFn: editCar,
+    onSuccess: (updatedCar, variables) => {
+      // Cập nhật cache tạm thời để hiển thị ngay
+      queryClient.setQueryData(["cars"], (old) =>
+        old.map((car) =>
+          car._id === variables.carId
+            ? {
+                ...car,
+                nameCar: variables.updatedCar.nameCar,
+                licensePlate: variables.updatedCar.licensePlate,
+                seats: variables.updatedCar.seats,
+                vehicleTypeId: variables.updatedCar.vehicleTypeId,
+                userId: {
+                  ...car.userId,
+                  username: variables.updatedCar.userId.username,
+                  email: variables.updatedCar.userId.email,
+                },
+              }
+            : car
+        )
       );
+      // Làm mới danh sách xe từ server
+      queryClient.invalidateQueries(["cars"]);
       setIsEditModalOpen(false);
       resetForm();
-    } catch (error) {
-      console.error("Failed to edit car:", error);
-    }
+    },
+    onError: (err) => {
+      if (err.message.includes("Không có token")) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        navigate("/login");
+      }
+    },
+  });
+
+  // Mutation để xóa xe
+  const deleteCarMutation = useMutation({
+    mutationFn: deleteCar,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["cars"]); // Làm mới danh sách xe
+    },
+    onError: (err) => {
+      if (err.message.includes("Không có token")) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        navigate("/login");
+      }
+    },
+  });
+
+  // Xử lý thêm xe
+  const handleAddCar = (e) => {
+    e.preventDefault();
+    const newCar = {
+      nameCar: formData.nameCar,
+      licensePlate: formData.licensePlate,
+      seats: parseInt(formData.seats),
+      vehicleTypeId: formData.vehicleTypeId,
+      userId: {
+        username: formData.username,
+        email: formData.email,
+      },
+    };
+    addCarMutation.mutate(newCar);
   };
 
-  const handleDeleteCar = async (carId) => {
+  // Xử lý sửa xe
+  const handleEditCar = (e) => {
+    e.preventDefault();
+    const updatedCar = {
+      nameCar: formData.nameCar,
+      licensePlate: formData.licensePlate,
+      seats: parseInt(formData.seats),
+      vehicleTypeId: formData.vehicleTypeId,
+      userId: {
+        username: formData.username,
+        email: formData.email,
+      },
+    };
+    editCarMutation.mutate({ carId: currentCar._id, updatedCar });
+  };
+
+  // Xử lý xóa xe
+  const handleDeleteCar = (carId) => {
     if (window.confirm("Bạn có chắc muốn xóa xe này?")) {
-      try {
-        setCars(cars.filter((car) => car._id !== carId));
-      } catch (error) {
-        console.error("Failed to delete car:", error);
-      }
+      deleteCarMutation.mutate(carId);
     }
   };
 
@@ -93,7 +228,7 @@ const InfoCar = () => {
 
   return (
     <div className="flex-1 p-6 bg-gray-50">
-      <div className="flex justify-between items рівні mb-4">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Quản lý xe</h2>
         <button
           onClick={() => setIsAddModalOpen(true)}
@@ -102,6 +237,10 @@ const InfoCar = () => {
           Thêm xe
         </button>
       </div>
+
+      {error && (
+        <p className="text-red-500 text-center mb-4">{error.message}</p>
+      )}
 
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-200">
@@ -116,7 +255,7 @@ const InfoCar = () => {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {isLoading ? (
               <tr>
                 <td colSpan="6" className="py-4 px-4 text-center text-blue-500">
                   Đang tải dữ liệu...
@@ -155,6 +294,7 @@ const InfoCar = () => {
                     <button
                       onClick={() => handleDeleteCar(car._id)}
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                      disabled={deleteCarMutation.isLoading}
                     >
                       Xóa
                     </button>
@@ -166,7 +306,7 @@ const InfoCar = () => {
         </table>
       </div>
 
-      {/* Add Car Modal */}
+      {/* Modal Thêm Xe */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg w-96">
@@ -246,6 +386,11 @@ const InfoCar = () => {
                   required
                 />
               </div>
+              {addCarMutation.isError && (
+                <p className="text-red-500 text-sm mb-4">
+                  {addCarMutation.error.message}
+                </p>
+              )}
               <div className="flex justify-end">
                 <button
                   type="button"
@@ -260,8 +405,9 @@ const InfoCar = () => {
                 <button
                   type="submit"
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  disabled={addCarMutation.isLoading}
                 >
-                  Thêm
+                  {addCarMutation.isLoading ? "Đang xử lý..." : "Thêm"}
                 </button>
               </div>
             </form>
@@ -269,107 +415,17 @@ const InfoCar = () => {
         </div>
       )}
 
-      {/* Edit Car Modal */}
+      {/* Modal Sửa Xe */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-xl font-bold mb-4">Sửa thông tin xe</h3>
-            <form onSubmit={handleEditCar}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Tên xe</label>
-                <input
-                  type="text"
-                  name="nameCar"
-                  value={formData.nameCar}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Biển số xe
-                </label>
-                <input
-                  type="text"
-                  name="licensePlate"
-                  value={formData.licensePlate}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Loại xe
-                </label>
-                <input
-                  type="text"
-                  name="vehicleTypeId"
-                  value={formData.vehicleTypeId}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Số ghế</label>
-                <input
-                  type="number"
-                  name="seats"
-                  value={formData.seats}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Tên chủ xe
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Email chủ xe
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    resetForm();
-                  }}
-                  className="bg-gray-300 text-black px-4 py-2 rounded mr-2 hover:bg-gray-400"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  Lưu
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <UpdateInfoCar
+          formData={formData}
+          handleEditCar={handleEditCar}
+          handleInputChange={handleInputChange}
+          setIsEditModalOpen={setIsEditModalOpen}
+          resetForm={resetForm}
+          loading={editCarMutation.isLoading}
+          error={editCarMutation.isError ? editCarMutation.error.message : null}
+        />
       )}
     </div>
   );

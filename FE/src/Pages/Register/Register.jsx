@@ -87,7 +87,7 @@ const Register = () => {
               Tạo tài khoản
             </h2>
             <p className="text-center text-sm text-gray-500 mb-6">
-              Đã có tài khoản?{" "}
+              Đã có tài khoản?
               <a href="/login" className="text-blue-600 underline font-medium">
                 Đăng nhập
               </a>
@@ -243,11 +243,11 @@ const Register = () => {
 
             {/* Social login */}
             <p className="mt-6 text-sm text-center text-gray-600">
-              Hoặc đăng ký với{" "}
+              Hoặc đăng ký với
               <a href="#" className="text-blue-600 underline font-medium">
                 Google
-              </a>{" "}
-              hoặc{" "}
+              </a>
+              hoặc
               <a href="#" className="text-blue-600 underline font-medium">
                 Facebook
               </a>
