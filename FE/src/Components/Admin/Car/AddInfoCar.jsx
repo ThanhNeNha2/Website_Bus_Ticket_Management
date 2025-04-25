@@ -1,16 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
-const UpdateInfoCar = ({
+const AddInfoCar = ({
+  handleAddCar,
   formData,
-  handleEditCar,
   handleInputChange,
-  setIsEditModalOpen,
+  addCarMutation,
+  setIsAddModalOpen,
   resetForm,
-  loading,
   setFile,
   setFormData,
 }) => {
   const [imagePreview, setImagePreview] = useState(null);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setImagePreview(imageUrl);
+    }
+  };
   // Available features for selection
   const availableFeatures = [
     "WiFi",
@@ -18,15 +26,6 @@ const UpdateInfoCar = ({
     "Charger",
     "TV",
   ];
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setImagePreview(imageUrl);
-      setFile(file);
-    }
-  };
 
   // Handle adding a feature
   const handleAddFeature = (e) => {
@@ -50,22 +49,18 @@ const UpdateInfoCar = ({
       ),
     });
   };
-
-  useEffect(() => {
-    setImagePreview(formData.image);
-  }, [formData.image]);
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center mt-14">
       <div className="bg-white p-6 rounded-lg w-[800px]">
-        <h3 className="text-xl font-bold mb-4">Sửa thông tin xe</h3>
-        <form onSubmit={handleEditCar}>
+        <h3 className="text-xl font-bold mb-4">Thêm xe mới</h3>
+        <form onSubmit={handleAddCar}>
           <div className="flex gap-4">
             <div className="mb-4 flex-1">
               <label className="block text-sm font-medium mb-1">Tên xe</label>
               <input
                 type="text"
                 name="nameCar"
+                placeholder="VD: Ford Transit Limousine"
                 value={formData.nameCar}
                 onChange={handleInputChange}
                 className="w-full border px-3 py-2 rounded"
@@ -79,6 +74,7 @@ const UpdateInfoCar = ({
               <input
                 type="text"
                 name="licensePlate"
+                placeholder="VD: 51A-12343"
                 value={formData.licensePlate}
                 onChange={handleInputChange}
                 className="w-full border px-3 py-2 rounded"
@@ -94,7 +90,13 @@ const UpdateInfoCar = ({
                 type="file"
                 name="vehicleImage"
                 className="w-full border px-3 py-2 rounded"
-                onChange={handleImageChange}
+                onChange={(e) => {
+                  handleImageChange(e);
+                  if (e.target.files && e.target.files.length > 0) {
+                    setFile(e.target.files[0]);
+                  }
+                }}
+                required
               />
             </div>
             <div className="mb-4 flex-1 h-[200px] bg-gray-100 flex items-center justify-center overflow-hidden rounded">
@@ -111,7 +113,6 @@ const UpdateInfoCar = ({
               )}
             </div>
           </div>
-
           <div className="flex gap-4">
             <div className="mb-4 flex-1">
               <label className="block text-sm font-medium mb-1">Loại xe</label>
@@ -132,6 +133,7 @@ const UpdateInfoCar = ({
               <input
                 type="number"
                 name="seats"
+                placeholder="VD: 20"
                 value={formData.seats}
                 onChange={handleInputChange}
                 className="w-full border px-3 py-2 rounded"
@@ -139,7 +141,6 @@ const UpdateInfoCar = ({
               />
             </div>
           </div>
-
           <div className="flex gap-4">
             <div className="mb-4 flex-1">
               <label className="block text-sm font-medium mb-1">Dịch vụ</label>
@@ -186,12 +187,16 @@ const UpdateInfoCar = ({
               </div>
             </div>
           </div>
-
+          {addCarMutation.isError && (
+            <p className="text-red-500 text-sm mb-4">
+              {addCarMutation.error.message}
+            </p>
+          )}
           <div className="flex justify-end">
             <button
               type="button"
               onClick={() => {
-                setIsEditModalOpen(false);
+                setIsAddModalOpen(false);
                 resetForm();
               }}
               className="bg-gray-300 text-black px-4 py-2 rounded mr-2 hover:bg-gray-400"
@@ -201,9 +206,9 @@ const UpdateInfoCar = ({
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              disabled={loading}
+              disabled={addCarMutation.isLoading}
             >
-              {loading ? "Đang xử lý..." : "Lưu"}
+              {addCarMutation.isLoading ? "Đang xử lý..." : "Thêm"}
             </button>
           </div>
         </form>
@@ -212,4 +217,4 @@ const UpdateInfoCar = ({
   );
 };
 
-export default UpdateInfoCar;
+export default AddInfoCar;

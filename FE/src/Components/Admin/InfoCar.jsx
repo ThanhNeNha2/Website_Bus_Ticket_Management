@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../Util/axios";
 import UpdateInfoCar from "./Car/UpdateInfoCar";
+import upload from "../../Util/upload";
+import AddInfoCar from "./Car/AddInfoCar";
 
 // Hàm gọi API để lấy danh sách xe
 const fetchCars = async () => {
@@ -59,14 +61,17 @@ const deleteCar = async (carId) => {
 const InfoCar = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [file, setFile] = useState(null);
   const [currentCar, setCurrentCar] = useState(null);
   const [formData, setFormData] = useState({
     nameCar: "",
     licensePlate: "",
     seats: "",
-    vehicleTypeId: "",
+    vehicleType: "",
     username: "",
     email: "",
+    image: "",
+    features: [],
   });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -118,7 +123,7 @@ const InfoCar = () => {
                 nameCar: variables.updatedCar.nameCar,
                 licensePlate: variables.updatedCar.licensePlate,
                 seats: variables.updatedCar.seats,
-                vehicleTypeId: variables.updatedCar.vehicleTypeId,
+                vehicleType: variables.updatedCar.vehicleType,
                 userId: {
                   ...car.userId,
                   username: variables.updatedCar.userId.username,
@@ -164,28 +169,31 @@ const InfoCar = () => {
       nameCar: formData.nameCar,
       licensePlate: formData.licensePlate,
       seats: parseInt(formData.seats),
-      vehicleTypeId: formData.vehicleTypeId,
-      userId: {
-        username: formData.username,
-        email: formData.email,
-      },
+      vehicleType: formData.vehicleType,
+      features: formData.features,
     };
+    console.log("check thong tin tạo ", newCar);
+
     addCarMutation.mutate(newCar);
   };
 
   // Xử lý sửa xe
-  const handleEditCar = (e) => {
+  const handleEditCar = async (e) => {
     e.preventDefault();
+    const url = await upload(file, "car");
     const updatedCar = {
       nameCar: formData.nameCar,
       licensePlate: formData.licensePlate,
       seats: parseInt(formData.seats),
-      vehicleTypeId: formData.vehicleTypeId,
+      vehicleType: formData.vehicleType,
+      image: url,
+      features: formData.features,
       userId: {
         username: formData.username,
         email: formData.email,
       },
     };
+    console.log(" check thong tin muon sua ", updatedCar);
     editCarMutation.mutate({ carId: currentCar._id, updatedCar });
   };
 
@@ -202,7 +210,9 @@ const InfoCar = () => {
       nameCar: car.nameCar,
       licensePlate: car.licensePlate,
       seats: car.seats.toString(),
-      vehicleTypeId: car.vehicleTypeId,
+      vehicleType: car.vehicleType,
+      image: car?.image,
+      features: car.features,
       username: car.userId.username,
       email: car.userId.email,
     });
@@ -214,10 +224,12 @@ const InfoCar = () => {
       nameCar: "",
       licensePlate: "",
       seats: "",
-      vehicleTypeId: "",
+      vehicleType: "",
       username: "",
       email: "",
+      features: [],
     });
+    setFile(null); // Reset file
     setCurrentCar(null);
   };
 
@@ -275,7 +287,7 @@ const InfoCar = () => {
                   </td>
                   <td className="py-2 px-4 border-b">{car.licensePlate}</td>
                   <td className="py-2 px-4 border-b">
-                    {car.vehicleTypeId || "Chưa cập nhật"}
+                    {car.vehicleType || "Chưa cập nhật"}
                   </td>
                   <td className="py-2 px-4 border-b">{car.seats}</td>
                   <td className="py-2 px-4 border-b">
@@ -308,111 +320,16 @@ const InfoCar = () => {
 
       {/* Modal Thêm Xe */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-xl font-bold mb-4">Thêm xe mới</h3>
-            <form onSubmit={handleAddCar}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Tên xe</label>
-                <input
-                  type="text"
-                  name="nameCar"
-                  value={formData.nameCar}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Biển số xe
-                </label>
-                <input
-                  type="text"
-                  name="licensePlate"
-                  value={formData.licensePlate}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Loại xe
-                </label>
-                <input
-                  type="text"
-                  name="vehicleTypeId"
-                  value={formData.vehicleTypeId}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Số ghế</label>
-                <input
-                  type="number"
-                  name="seats"
-                  value={formData.seats}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Tên chủ xe
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">
-                  Email chủ xe
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full border px-3 py-2 rounded"
-                  required
-                />
-              </div>
-              {addCarMutation.isError && (
-                <p className="text-red-500 text-sm mb-4">
-                  {addCarMutation.error.message}
-                </p>
-              )}
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddModalOpen(false);
-                    resetForm();
-                  }}
-                  className="bg-gray-300 text-black px-4 py-2 rounded mr-2 hover:bg-gray-400"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  disabled={addCarMutation.isLoading}
-                >
-                  {addCarMutation.isLoading ? "Đang xử lý..." : "Thêm"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <AddInfoCar
+          handleAddCar={handleAddCar}
+          formData={formData}
+          handleInputChange={handleInputChange}
+          addCarMutation={addCarMutation}
+          setIsAddModalOpen={setIsAddModalOpen}
+          setFile={setFile}
+          setFormData={setFormData}
+          resetForm={resetForm}
+        />
       )}
 
       {/* Modal Sửa Xe */}
@@ -423,6 +340,8 @@ const InfoCar = () => {
           handleInputChange={handleInputChange}
           setIsEditModalOpen={setIsEditModalOpen}
           resetForm={resetForm}
+          setFile={setFile}
+          setFormData={setFormData}
           loading={editCarMutation.isLoading}
           error={editCarMutation.isError ? editCarMutation.error.message : null}
         />
