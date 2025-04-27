@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../Util/axios";
 import UpdateInfoCar from "./Car/UpdateInfoCar";
 import upload from "../../Util/upload";
 import AddInfoCar from "./Car/AddInfoCar";
+import ReactPaginate from "react-paginate";
 
 // Hàm gọi API để lấy danh sách xe
 const fetchCars = async () => {
@@ -59,10 +60,35 @@ const deleteCar = async (carId) => {
 };
 
 const InfoCar = () => {
+  // Phân trang
+  const [currentItems, setCurrentItems] = useState(null);
+  const [pageCount, setPageCount] = useState(0);
+  // Here we use item offsets; we could also use page offsets
+  // following the API or data you're working with.
+  const [itemOffset, setItemOffset] = useState(0);
+  const itemsPerPage = 4;
+  const items = [...Array(33).keys()];
+
+  useEffect(() => {
+    // Fetch items from another resources.
+    const endOffset = itemOffset + itemsPerPage;
+    console.log(`Loading items from ${itemOffset} to ${endOffset}`);
+    setCurrentItems(items.slice(itemOffset, endOffset));
+    setPageCount(Math.ceil(items.length / itemsPerPage));
+  }, [itemOffset, itemsPerPage]);
+
+  // Invoke when user click to request another page.
+  const handlePageClick = (event) => {
+    const newOffset = (event.selected * itemsPerPage) % items.length;
+    console.log(
+      `User requested page number ${event.selected}, which is offset ${newOffset}`
+    );
+    setItemOffset(newOffset);
+  };
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
   const [file, setFile] = useState(null);
   const [currentCar, setCurrentCar] = useState(null);
   const [infoDelete, setInfoDelete] = useState({
@@ -259,7 +285,7 @@ const InfoCar = () => {
         <p className="text-red-500 text-center mb-4">{error.message}</p>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto mb-7">
         <table className="min-w-full bg-white border border-gray-200">
           <thead>
             <tr className="bg-gray-100">

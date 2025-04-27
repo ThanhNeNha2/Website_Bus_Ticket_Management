@@ -3,11 +3,7 @@ import logo from "../images/Logo1.png";
 import { Link } from "react-router-dom";
 
 const Header = () => {
-  const user = {
-    image:
-      "https://i.pinimg.com/736x/3c/ae/07/3cae079ca0b9e55ec6bfc1b358c9b1e2.jpg",
-    name: "thanh",
-  };
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -60,15 +56,18 @@ const Header = () => {
                 onMouseEnter={() => setIsDropdownOpen(true)}
               >
                 <img
-                  src={user.image}
+                  src={
+                    user.image ||
+                    "https://i.pinimg.com/736x/3c/ae/07/3cae079ca0b9e55ec6bfc1b358c9b1e2.jpg"
+                  }
                   alt="User"
                   className="w-8 h-8 rounded-full object-cover"
                 />
-                <span className="hover:text-gray-300">{user.name}</span>
+                <span className="hover:text-gray-300">{user.username}</span>
               </div>
               {isDropdownOpen && (
                 <ul
-                  className="absolute top-full right-0 mt-2 w-48 bg-black border border-gray-600 rounded-md shadow-lg"
+                  className="absolute top-full right-0 mt-4 w-48 bg-black border border-gray-600 rounded-md shadow-lg"
                   onMouseEnter={() => setIsDropdownOpen(true)}
                   onMouseLeave={() => setIsDropdownOpen(false)}
                 >

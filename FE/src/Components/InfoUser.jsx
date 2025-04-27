@@ -1,32 +1,103 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../Util/axios";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import upload from "../Util/upload";
+import toast from "react-hot-toast";
+
+const fetchUserById = async (id) => {
+  const res = await api.get(`/user/${id}`);
+  return res.data.user;
+};
+
+const updateUser = async ({ id, infoUpdate }) => {
+  console.log("Updating user with id:", id, "data:", infoUpdate); // Debug
+  const res = await api.put(`/user/${id}`, infoUpdate);
+  console.log("API response:", res.data); // Debug
+  return res.data.user;
+};
 
 const InfoUser = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const [formData, setFormData] = useState({
-    username: user.username || "",
-    phone: user.phone || "",
-    email: user.email || "",
-    address: user.address || "",
-    description: user.description || "",
+  const queryClient = useQueryClient();
+
+  // UPDATE
+  const userUpdate = useMutation({
+    mutationFn: updateUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user", user._id] });
+    },
   });
 
+  // GET INFO USER
+  const {
+    isLoading,
+    error,
+    data: infouserGet,
+  } = useQuery({
+    queryKey: ["user", user._id],
+    queryFn: () => fetchUserById(user._id),
+    enabled: !!user._id,
+  });
+
+  const [formData, setFormData] = useState({
+    username: "",
+    phone: "",
+    email: "",
+    address: "",
+    description: "",
+    image: "",
+  });
   const [initialFormData, setInitialFormData] = useState({ ...formData });
   const [avatar, setAvatar] = useState(user.avatar || null);
   const [avatarFile, setAvatarFile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
+  const [curentId, setCurrentId] = useState(null);
+
+  // GET INFO USER
+  useEffect(() => {
+    if (infouserGet) {
+      setAvatar(infouserGet.image);
+      setFormData({
+        username: infouserGet.username || "",
+        phone: infouserGet.phone || "",
+        email: infouserGet.email || "",
+        address: infouserGet.address || "",
+        description: infouserGet.description || "",
+        image: infouserGet.image || "",
+      });
+      setCurrentId(infouserGet._id);
+      setInitialFormData({
+        username: infouserGet.username || "",
+        phone: infouserGet.phone || "",
+        email: infouserGet.email || "",
+        address: infouserGet.address || "",
+        image: infouserGet.image || "",
+      });
+    }
+  }, [infouserGet]);
+
+  console.log("formData:", formData); // Debug
+
+  if (isLoading) return <div>Loading...</div>;
+
+  if (error)
+    return <div>Lỗi khi tải thông tin người dùng: {error.message}</div>;
+
+  // FILE IMAGE
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
+    console.log("check ", e.target.files.length);
+
     if (file) {
       setAvatar(URL.createObjectURL(file));
-      setAvatarFile(file);
+    }
+    if (e.target.files && e.target.files.length > 0) {
+      setAvatarFile(e.target.files[0]);
     }
   };
 
@@ -41,13 +112,13 @@ const InfoUser = () => {
 
   const handleCancel = () => {
     setFormData({ ...initialFormData });
-    setAvatar(user.avatar || null);
+
     setAvatarFile(null);
     setIsEditing(false);
-    setError(null);
-    setSuccess(null);
+    setErrorMsg(null);
   };
 
+  // UPDATE
   const handleUpdate = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("accessToken");
@@ -56,65 +127,39 @@ const InfoUser = () => {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const res = await api.put(`/user/${user._id}`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`, // Include token for authentication
-          // Let Axios set Content-Type automatically for FormData
-        },
-      });
-
-      if (res.data.errCode === 0) {
-        const updatedUser = { ...user, ...res.data.data };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-
-        setFormData({
-          username: updatedUser.username || "",
-          phone: updatedUser.phone || "",
-          email: updatedUser.email || "",
-          address: updatedUser.address || "",
-          description: updatedUser.description || "",
-        });
-        setInitialFormData({
-          username: updatedUser.username || "",
-          phone: updatedUser.phone || "",
-          email: updatedUser.email || "",
-          address: updatedUser.address || "",
-          description: updatedUser.description || "",
-        });
-
-        setAvatar(updatedUser.avatar || avatar);
-        setAvatarFile(null);
-        setSuccess("Cập nhật thông tin thành công!");
-        setIsEditing(false);
-      } else {
-        setError(res.data.message || "Không thể cập nhật thông tin.");
-      }
-    } catch (err) {
-      console.error("Update error:", err);
-      if (err.response?.status === 401) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
-        navigate("/login");
-      } else {
-        setError(
-          err.response?.data?.message ||
-            "Không thể cập nhật thông tin. Vui lòng thử lại."
-        );
-      }
-    } finally {
-      setLoading(false);
+    if (!curentId) {
+      setErrorMsg("Không tìm thấy ID người dùng. Vui lòng đăng nhập lại.");
+      return;
     }
+
+    if (!Object.values(formData).some((value) => value)) {
+      setErrorMsg("Vui lòng nhập ít nhất một trường thông tin.");
+      return;
+    }
+
+    const url = await upload(avatarFile, "user");
+    console.log("check url ", url);
+
+    // console.log("Mutation data:", { id: curentId, infoUpdate: formData }); // Debug
+    userUpdate.mutate(
+      { id: curentId, infoUpdate: { ...formData, image: url } },
+      {
+        onSuccess: () => {
+          toast.success("Cập nhật thông tin thành công!");
+          setIsEditing(false);
+          setInitialFormData({ ...formData });
+          setAvatarFile(null);
+        },
+        onError: (error) => {
+          setErrorMsg(`Lỗi khi cập nhật: ${error.message}`);
+        },
+      }
+    );
   };
 
   return (
     <div className="mx-auto flex-1 bg-white shadow-lg p-6 rounded-xl space-y-4">
-      {success && <p className="text-green-500 text-center">{success}</p>}
-      {error && <p className="text-red-500 text-center">{error}</p>}
+      {errorMsg && <p className="text-red-500 text-center">{errorMsg}</p>}
 
       <div className="flex flex-col items-center">
         <div className="w-20 h-20 rounded-full bg-gray-300 overflow-hidden mb-2">
@@ -143,16 +188,18 @@ const InfoUser = () => {
           )}
         </div>
 
-        <label className="bg-blue-500 text-white px-4 py-1 rounded cursor-pointer">
-          Chọn ảnh hoặc thay đổi ảnh đại diện
-          <input
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={handleAvatarChange}
-            disabled={!isEditing}
-          />
-        </label>
+        {isEditing && (
+          <label className="bg-blue-500 text-white px-4 py-1 rounded cursor-pointer">
+            Chọn ảnh
+            <input
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              disabled={!isEditing}
+            />
+          </label>
+        )}
       </div>
 
       <form onSubmit={handleUpdate} className="space-y-4">
@@ -219,10 +266,9 @@ const InfoUser = () => {
               </button>
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
-                disabled={loading}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
               >
-                {loading ? "Đang lưu..." : "Lưu"}
+                Lưu
               </button>
             </>
           ) : (

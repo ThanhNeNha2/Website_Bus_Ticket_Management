@@ -15,7 +15,7 @@ const upload = async (file, value) => {
   if (value === "user") {
     data.append(
       "folder",
-      "WebSite-ecommerce-interior/WebSite-ecommerce-interior-user"
+      "Website_Bus_Ticket_Management/Website_Bus_Ticket_Management_Car"
     );
   }
   try {
