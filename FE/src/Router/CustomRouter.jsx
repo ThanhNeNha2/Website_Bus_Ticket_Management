@@ -1,11 +1,11 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import Home from "../Pages/Home/Home";
 import Login from "../Pages/Login/Login";
 import MainLayout from "../Layouts/MainLayout";
 import Introduce from "../Pages/Introduce/Introduce";
 import ListRoutertrip from "../Pages/ListRoutertrip/ListRoutertrip";
 import News from "../Pages/News/News";
-import AdminLayout from "../Layouts/AdminLayout";
+import GarageLayout from "../Layouts/AdminLayout";
 import InfoTicket from "../Components/Admin/InfoTicket";
 import Register from "../Pages/Register/Register";
 import ClientLayout from "../Layouts/ClientLayout";
@@ -13,33 +13,99 @@ import InfoUser from "../Components/InfoUser";
 import InfoTrip from "../Components/Admin/InfoTrip";
 import InfoCar from "../Components/Admin/InfoCar";
 
+// Component ProtectedRoute để kiểm tra token và vai trò
+const ProtectedRoute = ({ children, allowedRoles, requireAuth = true }) => {
+  const token = localStorage.getItem("accessToken");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // Nếu yêu cầu xác thực nhưng không có token, chuyển hướng đến login
+  if (requireAuth && !token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Nếu có allowedRoles và vai trò không khớp, chuyển hướng đến trang chính
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
 const CustomRouter = () => {
+  const token = localStorage.getItem("accessToken");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user?.role;
+
   return (
     <Routes>
-      {/* Các trang dùng chung layout */}
+      {/* MainLayout public routes */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/introduce" element={<Introduce />} />
-        <Route path="/ListRoutertrip" element={<ListRoutertrip />} />
-        <Route path="/news" element={<News />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route
+          path="/introduce"
+          element={
+            <ProtectedRoute>
+              <Introduce />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ListRoutertrip"
+          element={
+            <ProtectedRoute>
+              <ListRoutertrip />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/news"
+          element={
+            <ProtectedRoute>
+              <News />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
-      {/* ADMIN  */}
-      <Route element={<AdminLayout />}>
-        <Route path="/admin/ticket-management" element={<InfoTicket />} />
-        <Route path="/admin/trip-management" element={<InfoTrip />} />
-        <Route path="/admin/user-management" element={<InfoUser />} />
-        <Route path="/admin/vehicle-management" element={<InfoCar />} />
-      </Route>
+      {/* GarageLayout routes */}
+      {role === "GARAGE" && (
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={["GARAGE"]}>
+              <GarageLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/ticket-management" element={<InfoTicket />} />
+          <Route path="/trip-management" element={<InfoTrip />} />
+          <Route path="/user-management" element={<InfoUser />} />
+          <Route path="/vehicle-management" element={<InfoCar />} />
+          <Route path="/info" element={<InfoUser />} />
+        </Route>
+      )}
 
-      {/* CLIENT */}
-      <Route element={<ClientLayout />}>
-        <Route path="/info" element={<InfoUser />} />
-      </Route>
+      {/* ClientLayout routes */}
+      {role === "USER" && (
+        <Route
+          element={
+            <ProtectedRoute allowedRoles={["USER"]}>
+              <ClientLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/info" element={<InfoUser />} />
+        </Route>
+      )}
 
-      {/* Trang không dùng layout */}
+      {/* 404 fallback */}
+      <Route
+        path="*"
+        element={
+          token ? <Navigate to="/" replace /> : <Navigate to="/login" replace />
+        }
+      />
     </Routes>
   );
 };

@@ -17,12 +17,12 @@ const Sidebar = () => {
     {
       name: "Quản lý vé",
       icon: <IoTicketOutline />,
-      path: "/admin/ticket-management",
+      path: "/ticket-management",
     },
     {
       name: "Quản lý chuyến xe",
       icon: <FaBus />,
-      path: "/admin/trip-management",
+      path: "/trip-management",
     },
     {
       name: "Thống kê",
@@ -33,7 +33,7 @@ const Sidebar = () => {
       ),
       path: "/statistics",
     },
-    { name: "Quản lý xe", icon: <FaCarOn />, path: "admin/vehicle-management" },
+    { name: "Quản lý xe", icon: <FaCarOn />, path: "/vehicle-management" },
     { name: "Album ảnh", icon: <FaRegImage />, path: "/photo-album" },
     {
       name: "Giới thiệu",

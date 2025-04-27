@@ -61,8 +61,15 @@ const deleteCar = async (carId) => {
 const InfoCar = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const [file, setFile] = useState(null);
   const [currentCar, setCurrentCar] = useState(null);
+  const [infoDelete, setInfoDelete] = useState({
+    InfoLicensePlate: "",
+    id: "",
+  });
+
   const [formData, setFormData] = useState({
     nameCar: "",
     licensePlate: "",
@@ -152,6 +159,7 @@ const InfoCar = () => {
     mutationFn: deleteCar,
     onSuccess: () => {
       queryClient.invalidateQueries(["cars"]); // Làm mới danh sách xe
+      setIsDeleteModalOpen(false);
     },
     onError: (err) => {
       if (err.message.includes("Không có token")) {
@@ -172,7 +180,6 @@ const InfoCar = () => {
       vehicleType: formData.vehicleType,
       features: formData.features,
     };
-    console.log("check thong tin tạo ", newCar);
 
     addCarMutation.mutate(newCar);
   };
@@ -193,15 +200,13 @@ const InfoCar = () => {
         email: formData.email,
       },
     };
-    console.log(" check thong tin muon sua ", updatedCar);
+
     editCarMutation.mutate({ carId: currentCar._id, updatedCar });
   };
 
   // Xử lý xóa xe
-  const handleDeleteCar = (carId) => {
-    if (window.confirm("Bạn có chắc muốn xóa xe này?")) {
-      deleteCarMutation.mutate(carId);
-    }
+  const handleDeleteCar = () => {
+    deleteCarMutation.mutate(infoDelete.id);
   };
 
   const openEditModal = (car) => {
@@ -304,7 +309,13 @@ const InfoCar = () => {
                       Sửa
                     </button>
                     <button
-                      onClick={() => handleDeleteCar(car._id)}
+                      onClick={() => {
+                        setIsDeleteModalOpen(true);
+                        setInfoDelete({
+                          InfoLicensePlate: car.licensePlate,
+                          id: car._id,
+                        });
+                      }}
                       className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                       disabled={deleteCarMutation.isLoading}
                     >
@@ -317,7 +328,31 @@ const InfoCar = () => {
           </tbody>
         </table>
       </div>
-
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-2xl shadow-lg max-w-md w-full text-center">
+            <h3 className="text-xl font-bold mb-4">Xóa xe</h3>
+            <span className="text-base font-normal ">
+              Bạn chắc chắn muốn xe với biển số là:{" "}
+              <p className="font-semibold">{infoDelete.InfoLicensePlate}</p>
+            </span>
+            <div className="flex justify-center gap-4 mt-5">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteCar}
+                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal Thêm Xe */}
       {isAddModalOpen && (
         <AddInfoCar
