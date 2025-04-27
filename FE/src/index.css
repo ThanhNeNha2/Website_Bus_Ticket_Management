@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-.pagination {
+/* .pagination {
   list-style: none;
   display: flex;
   justify-content: center;
@@ -26,4 +26,4 @@
   background-color: #5ab1bb;
   color: #fff;
   border-color: #5ab1bb; /* Khi hover hoặc active thì đổi màu viền luôn */
-}
+} */

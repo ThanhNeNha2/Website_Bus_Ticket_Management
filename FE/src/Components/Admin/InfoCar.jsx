@@ -408,7 +408,7 @@ const InfoCar = () => {
         />
       )}
 
-      <ReactPaginate
+      {/* <ReactPaginate
         breakLabel="..."
         nextLabel=">"
         previousLabel="<"
@@ -421,7 +421,7 @@ const InfoCar = () => {
         previousLinkClassName="page-num"
         nextLinkClassName="page-num"
         activeLinkClassName="active"
-      />
+      /> */}
     </div>
   );
 };
