@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.pagination {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 5rem;
+  font-size: 1.2rem;
+  gap: 5px;
+}
+
+.pagination .page-num {
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: 400;
+  border: 1px solid #ccc; /* Thêm viền */
+  transition: all 0.3s ease;
+}
+
+.pagination .page-num:hover,
+.pagination .active {
+  background-color: #5ab1bb;
+  color: #fff;
+  border-color: #5ab1bb; /* Khi hover hoặc active thì đổi màu viền luôn */
+}
