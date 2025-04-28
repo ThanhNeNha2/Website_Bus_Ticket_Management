@@ -1,23 +1,26 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../Util/axios";
 import UpdateInfoCar from "./Car/UpdateInfoCar";
 import upload from "../../Util/upload";
 import AddInfoCar from "./Car/AddInfoCar";
-import ReactPaginate from "react-paginate";
+import Pagination from "../Pagination";
 
 // Hàm gọi API để lấy danh sách xe
-const fetchCars = async () => {
+const fetchCars = async ({ page = 1, limit = 5 }) => {
   const token = localStorage.getItem("accessToken");
   if (!token) {
     throw new Error("Không có token. Vui lòng đăng nhập lại.");
   }
-  const res = await api.get("/cars");
+  const res = await api.get(`/cars?page=${page}&limit=${limit}`);
   if (res.data.errCode !== 0) {
     throw new Error(res.data.message || "Không thể tải danh sách xe.");
   }
-  return res.data.data.cars || [];
+  return {
+    cars: res.data.data.cars || [],
+    totalItems: res.data.data.total || 1,
+  };
 };
 
 // Hàm gọi API để thêm xe
@@ -60,32 +63,6 @@ const deleteCar = async (carId) => {
 };
 
 const InfoCar = () => {
-  // Phân trang
-  const [currentItems, setCurrentItems] = useState(null);
-  const [pageCount, setPageCount] = useState(0);
-  // Here we use item offsets; we could also use page offsets
-  // following the API or data you're working with.
-  const [itemOffset, setItemOffset] = useState(0);
-  const itemsPerPage = 4;
-  const items = [...Array(33).keys()];
-
-  useEffect(() => {
-    // Fetch items from another resources.
-    const endOffset = itemOffset + itemsPerPage;
-    console.log(`Loading items from ${itemOffset} to ${endOffset}`);
-    setCurrentItems(items.slice(itemOffset, endOffset));
-    setPageCount(Math.ceil(items.length / itemsPerPage));
-  }, [itemOffset, itemsPerPage]);
-
-  // Invoke when user click to request another page.
-  const handlePageClick = (event) => {
-    const newOffset = (event.selected * itemsPerPage) % items.length;
-    console.log(
-      `User requested page number ${event.selected}, which is offset ${newOffset}`
-    );
-    setItemOffset(newOffset);
-  };
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -95,6 +72,8 @@ const InfoCar = () => {
     InfoLicensePlate: "",
     id: "",
   });
+  const [currentPage, setCurrentPage] = useState(1); // Trang hiện tại
+  const itemsPerPage = 7; // Số xe mỗi trang
 
   const [formData, setFormData] = useState({
     nameCar: "",
@@ -111,26 +90,19 @@ const InfoCar = () => {
 
   // Query để lấy danh sách xe
   const {
-    data: cars = [],
+    data: { cars = [], totalItems = 1 } = {},
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["cars"],
-    queryFn: fetchCars,
-    onError: (err) => {
-      if (err.message.includes("Không có token")) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
-        navigate("/login");
-      }
-    },
+    queryKey: ["cars", currentPage],
+    queryFn: () => fetchCars({ page: currentPage, limit: itemsPerPage }),
   });
 
   // Mutation để thêm xe
   const addCarMutation = useMutation({
     mutationFn: addCar,
     onSuccess: () => {
-      queryClient.invalidateQueries(["cars"]); // Làm mới danh sách xe
+      queryClient.invalidateQueries(["cars"]);
       setIsAddModalOpen(false);
       resetForm();
     },
@@ -147,9 +119,9 @@ const InfoCar = () => {
   const editCarMutation = useMutation({
     mutationFn: editCar,
     onSuccess: (updatedCar, variables) => {
-      // Cập nhật cache tạm thời để hiển thị ngay
-      queryClient.setQueryData(["cars"], (old) =>
-        old.map((car) =>
+      queryClient.setQueryData(["cars", currentPage], (old) => ({
+        ...old,
+        cars: old.cars.map((car) =>
           car._id === variables.carId
             ? {
                 ...car,
@@ -164,9 +136,8 @@ const InfoCar = () => {
                 },
               }
             : car
-        )
-      );
-      // Làm mới danh sách xe từ server
+        ),
+      }));
       queryClient.invalidateQueries(["cars"]);
       setIsEditModalOpen(false);
       resetForm();
@@ -184,7 +155,7 @@ const InfoCar = () => {
   const deleteCarMutation = useMutation({
     mutationFn: deleteCar,
     onSuccess: () => {
-      queryClient.invalidateQueries(["cars"]); // Làm mới danh sách xe
+      queryClient.invalidateQueries(["cars"]);
       setIsDeleteModalOpen(false);
     },
     onError: (err) => {
@@ -206,7 +177,6 @@ const InfoCar = () => {
       vehicleType: formData.vehicleType,
       features: formData.features,
     };
-
     addCarMutation.mutate(newCar);
   };
 
@@ -226,7 +196,6 @@ const InfoCar = () => {
         email: formData.email,
       },
     };
-
     editCarMutation.mutate({ carId: currentCar._id, updatedCar });
   };
 
@@ -260,13 +229,21 @@ const InfoCar = () => {
       email: "",
       features: [],
     });
-    setFile(null); // Reset file
+    setFile(null);
     setCurrentCar(null);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  // Xử lý khi chuyển trang
+  const handlePageClick = (event) => {
+    const newPage = event.selected + 1; // ReactPaginate đếm từ 0
+    setCurrentPage(newPage);
   };
 
   return (
@@ -354,12 +331,13 @@ const InfoCar = () => {
           </tbody>
         </table>
       </div>
+
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-2xl shadow-lg max-w-md w-full text-center">
             <h3 className="text-xl font-bold mb-4">Xóa xe</h3>
-            <span className="text-base font-normal ">
-              Bạn chắc chắn muốn xe với biển số là:{" "}
+            <span className="text-base font-normal">
+              Bạn chắc chắn muốn xóa xe với biển số:{" "}
               <p className="font-semibold">{infoDelete.InfoLicensePlate}</p>
             </span>
             <div className="flex justify-center gap-4 mt-5">
@@ -379,6 +357,7 @@ const InfoCar = () => {
           </div>
         </div>
       )}
+
       {/* Modal Thêm Xe */}
       {isAddModalOpen && (
         <AddInfoCar
@@ -408,20 +387,7 @@ const InfoCar = () => {
         />
       )}
 
-      {/* <ReactPaginate
-        breakLabel="..."
-        nextLabel=">"
-        previousLabel="<"
-        onPageChange={handlePageClick}
-        pageRangeDisplayed={3}
-        pageCount={pageCount}
-        renderOnZeroPageCount={null}
-        containerClassName="pagination"
-        pageLinkClassName="page-num"
-        previousLinkClassName="page-num"
-        nextLinkClassName="page-num"
-        activeLinkClassName="active"
-      /> */}
+      <Pagination totalPages={totalPages} handlePageClick={handlePageClick} />
     </div>
   );
 };
