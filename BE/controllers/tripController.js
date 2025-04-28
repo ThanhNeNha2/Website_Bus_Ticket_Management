@@ -15,6 +15,8 @@ const createTrip = async (req, res) => {
       arrivalDate,
       carId,
       status,
+      dropOffProvince,
+      pickupProvince,
     } = req.body;
 
     // Kiểm tra dữ liệu đầu vào
@@ -26,7 +28,9 @@ const createTrip = async (req, res) => {
       !arrivalTime ||
       !departureDate ||
       !arrivalDate ||
-      !carId
+      !carId ||
+      !dropOffProvince ||
+      !pickupProvince
     ) {
       return res.status(400).json({
         errCode: 1,
@@ -71,6 +75,8 @@ const createTrip = async (req, res) => {
       departureDate,
       arrivalDate,
       carId,
+      dropOffProvince,
+      pickupProvince,
       status: status || "Scheduled",
       totalSeats: car.seats,
       seatsAvailable: car.seats,

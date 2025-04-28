@@ -32,7 +32,6 @@ const verifyTokenAndRoleAndID = (allowedRoles) => (req, res, next) => {
 
     // Nếu người dùng là chính họ (id trùng), cho phép luôn
     if (user.id === req.params.id) {
-      console.log("da vao day ");
       return next();
     }
 

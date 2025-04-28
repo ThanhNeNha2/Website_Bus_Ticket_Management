@@ -25,7 +25,7 @@ const carSchema = new mongoose.Schema(
     },
     vehicleType: {
       type: String,
-      enum: ["SIT", "BED", "LIMO"],
+      enum: ["SIT", "BED"],
       default: "SIT",
     },
     image: {

@@ -15,6 +15,19 @@ const tripSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
+    //  Tỉnh xuất phát
+    pickupProvince: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    // Tỉnh đi đến
+    dropOffProvince: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     // Gía vé
     ticketPrice: {
       type: Number,

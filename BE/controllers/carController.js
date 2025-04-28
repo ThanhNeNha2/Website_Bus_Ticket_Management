@@ -185,8 +185,6 @@ const getCarById = async (req, res) => {
 const updateCar = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("check id ", id);
-    console.log("check req.params ", req.params);
 
     const { nameCar, licensePlate, features, seats, vehicleType, image } =
       req.body;
