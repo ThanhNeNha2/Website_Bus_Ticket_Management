@@ -100,14 +100,15 @@ const InfoTrip = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["cars", currentPage],
+    queryKey: ["trip", currentPage],
     queryFn: () => fetchTrips({ page: currentPage, limit: itemsPerPage }),
   });
+  console.log(" check trips ", trips);
 
   const addTripMutation = useMutation({
     mutationFn: addTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries(["cars"]);
+      queryClient.invalidateQueries(["trip"]);
       setIsAddModalOpen(false);
       resetForm();
     },
@@ -172,10 +173,26 @@ const InfoTrip = () => {
 
   const handleAddTrip = (e) => {
     e.preventDefault();
-    const newTrip = formData;
-    console.log("newTrip", newTrip);
 
-    // addTripMutation.mutate(newCar);
+    // Tạo một bản sao của formData để gửi đi
+    const newTrip = {
+      pickupPoint: formData.pickupPoint,
+      dropOffPoint: formData.dropOffPoint,
+      pickupProvince: formData.pickupProvince,
+      dropOffProvince: formData.dropOffProvince,
+      departureDate: formData.departureDate,
+      departureTime: formData.departureTime,
+      arrivalDate: formData.arrivalDate,
+      arrivalTime: formData.arrivalTime,
+      ticketPrice: parseFloat(formData.ticketPrice),
+      status: formData.status,
+
+      carId: formData.carId,
+    };
+
+    console.log("Đang thêm chuyến xe mới:", newTrip);
+
+    addTripMutation.mutate(newTrip);
   };
 
   const handleEditCar = async (e) => {
@@ -289,17 +306,13 @@ const InfoTrip = () => {
             ) : (
               trips.map((trip) => {
                 // Định dạng departureDate và departureTime
-                const formattedDateTime =
-                  trip.departureDate && trip.departureTime
-                    ? `  ${format(parseISO(trip.departureDate), "dd/MM/yyyy")} 
-                       -
-                      ${format(parseISO(trip.departureTime), "HH:mm")}`
-                    : "Chưa cập nhật";
 
                 return (
                   <tr key={trip._id}>
                     <td className="py-2 px-4 border-b font-semibold">
-                      {trip.vehicleInfo || "Thông tin xe"}
+                      {trip.carId?.nameCar && trip.carId?.licensePlate
+                        ? `${trip.carId.nameCar} - ${trip.carId.licensePlate}`
+                        : "Thông tin xe"}
                     </td>
                     <td className="py-2 px-4 border-b">
                       {trip.pickupPoint || "Chưa cập nhật"}
@@ -319,7 +332,17 @@ const InfoTrip = () => {
                         ? `${trip.totalSeats}/${trip.seatsAvailable}`
                         : "Chưa cập nhật"}
                     </td>
-                    <td className="py-2 px-4 border-b">{formattedDateTime}</td>
+                    <td className="py-2 px-4 border-b">
+                      {trip.departureDate && trip.departureTime ? (
+                        <>
+                          {format(parseISO(trip.departureDate), "dd/MM/yyyy")} -{" "}
+                          {trip.departureTime}
+                        </>
+                      ) : (
+                        "Chưa cập nhật"
+                      )}
+                    </td>
+
                     <td className="py-2 px-4 border-b">
                       {trip.status || "Chưa cập nhật"}
                     </td>

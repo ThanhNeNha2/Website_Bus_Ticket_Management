@@ -84,10 +84,10 @@ const AddInfoTrip = ({
   ];
 
   const busStations = [
-    "Bến xe Miền Đông ",
-    "Bến xe Miền Tây ",
+    "Bến xe Miền Đông",
+    "Bến xe Miền Tây",
     "Bến xe Lương Yên",
-    "Bến xe Gia Lâm ",
+    "Bến xe Gia Lâm",
     "Bến xe Đà Nẵng",
     "Bến xe Nha Trang",
   ];
@@ -248,19 +248,7 @@ const AddInfoTrip = ({
                 <p className="text-red-500 text-sm mt-1">{seatError}</p>
               )}
             </div>
-            <div className="mb-4 flex-1  ">
-              <label className="block text-sm font-medium mb-1">
-                Ghế còn trống
-              </label>
-              <input
-                type="number"
-                name="seatsAvailable"
-                placeholder="VD: 20"
-                value={formData.seatsAvailable}
-                onChange={handleInputChange}
-                className="w-full border px-3 py-2 rounded"
-              />
-            </div>
+
             <div className="mb-4 flex-1">
               <label className="block text-sm font-medium mb-1">Giá vé</label>
               <input
@@ -288,9 +276,10 @@ const AddInfoTrip = ({
                 required
               >
                 <option value="">-- Chọn trạng thái --</option>
-                <option value="UPCOMING">Chưa xuất phát</option>
-                <option value="IN_PROGRESS">Đã xuất phát</option>
-                <option value="CANCELLED">Đã hủy</option>
+                <option value="Chưa xuất phát">Chưa xuất phát</option>
+                <option value="Đã xuất phát">Đã xuất phát</option>
+                <option value="Đã đến ">Đã đến </option>
+                <option value="Đã hủy">Đã hủy</option>
               </select>
             </div>
             <div className="mb-4 flex-1">
