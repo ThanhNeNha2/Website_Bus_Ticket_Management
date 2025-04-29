@@ -2,74 +2,55 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../Util/axios";
-import UpdateInfoCar from "./Car/UpdateInfoCar";
-import upload from "../../Util/upload";
-import AddInfoCar from "./Car/AddInfoCar";
-import Pagination from "../Pagination";
-import { format, parseISO } from "date-fns";
-import AddInfoTrip from "./Trip/AddInfoTrip";
 import UpdateInfoTrip from "./Trip/UpdateInfoTrip";
-// Hàm gọi API để lấy danh sách xe
+import AddInfoTrip from "./Trip/AddInfoTrip";
+import Pagination from "../Pagination";
+import { format } from "date-fns";
+
 const fetchTrips = async ({ page = 1, limit = 5 }) => {
   const token = localStorage.getItem("accessToken");
-  if (!token) {
-    throw new Error("Không có token. Vui lòng đăng nhập lại.");
-  }
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
   const res = await api.get(`/trips?page=${page}&limit=${limit}`);
-  if (res.data.errCode !== 0) {
+  if (res.data.errCode !== 0)
     throw new Error(res.data.message || "Không thể tải danh sách chuyến xe.");
-  }
   return {
     trips: res.data.data.trips || [],
     totalItems: res.data.data.total || 1,
   };
 };
 
-// Hàm gọi API để thêm xe
 const addTrip = async (newTrip) => {
   const token = localStorage.getItem("accessToken");
-  if (!token) {
-    throw new Error("Không có token. Vui lòng đăng nhập lại.");
-  }
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
   const res = await api.post("/trips", newTrip);
-  if (res.data.errCode !== 0) {
-    throw new Error(res.data.message || "Không thể thêm xe.");
-  }
+  if (res.data.errCode !== 0)
+    throw new Error(res.data.message || "Không thể thêm chuyến xe.");
   return res.data.data;
 };
 
-// Hàm gọi API để sửa xe
-const editCar = async ({ carId, updatedCar }) => {
+const editTrip = async ({ tripId, updatedTrip }) => {
   const token = localStorage.getItem("accessToken");
-  if (!token) {
-    throw new Error("Không có token. Vui lòng đăng nhập lại.");
-  }
-  const res = await api.put(`/cars/${carId}`, updatedCar);
-  if (res.data.errCode !== 0) {
-    throw new Error(res.data.message || "Không thể sửa xe.");
-  }
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
+  const res = await api.put(`/trips/${tripId}`, updatedTrip);
+  if (res.data.errCode !== 0)
+    throw new Error(res.data.message || "Không thể sửa chuyến xe.");
   return res.data.data;
 };
 
-// Hàm gọi API để xóa xe
-const deleteCar = async (carId) => {
+const deleteTrip = async (tripId) => {
   const token = localStorage.getItem("accessToken");
-  if (!token) {
-    throw new Error("Không có token. Vui lòng đăng nhập lại.");
-  }
-  const res = await api.delete(`/cars/${carId}`);
-  if (res.data.errCode !== 0) {
-    throw new Error(res.data.message || "Không thể xóa xe.");
-  }
-  return carId;
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
+  const res = await api.delete(`/trips/${tripId}`);
+  if (res.data.errCode !== 0)
+    throw new Error(res.data.message || "Không thể xóa chuyến xe.");
+  return tripId;
 };
 
-const InfoTrip = () => {
+const TripManagement = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [file, setFile] = useState(null);
-  const [currentCar, setCurrentCar] = useState(null);
+  const [currentTrip, setCurrentTrip] = useState(null);
   const [infoDelete, setInfoDelete] = useState({
     InfoLicensePlate: "",
     id: "",
@@ -92,6 +73,7 @@ const InfoTrip = () => {
     seatsAvailable: "",
     carId: "",
   });
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -100,15 +82,14 @@ const InfoTrip = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["trip", currentPage],
+    queryKey: ["trips", currentPage],
     queryFn: () => fetchTrips({ page: currentPage, limit: itemsPerPage }),
   });
-  console.log(" check trips ", trips);
 
   const addTripMutation = useMutation({
     mutationFn: addTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries(["trip"]);
+      queryClient.invalidateQueries(["trips"]);
       setIsAddModalOpen(false);
       resetForm();
     },
@@ -121,29 +102,18 @@ const InfoTrip = () => {
     },
   });
 
-  const editCarMutation = useMutation({
-    mutationFn: editCar,
-    onSuccess: (updatedCar, variables) => {
-      queryClient.setQueryData(["cars", currentPage], (old) => ({
+  const editTripMutation = useMutation({
+    mutationFn: editTrip,
+    onSuccess: (updatedTrip, variables) => {
+      queryClient.setQueryData(["trips", currentPage], (old) => ({
         ...old,
-        cars: old.cars.map((car) =>
-          car._id === variables.carId
-            ? {
-                ...car,
-                nameCar: variables.updatedCar.nameCar,
-                licensePlate: variables.updatedCar.licensePlate,
-                seats: variables.updatedCar.seats,
-                vehicleType: variables.updatedCar.vehicleType,
-                userId: {
-                  ...car.userId,
-                  username: variables.updatedCar.userId.username,
-                  email: variables.updatedCar.userId.email,
-                },
-              }
-            : car
+        trips: old.trips.map((trip) =>
+          trip._id === variables.tripId
+            ? { ...trip, ...variables.updatedTrip }
+            : trip
         ),
       }));
-      queryClient.invalidateQueries(["cars"]);
+      queryClient.invalidateQueries(["trips"]);
       setIsEditModalOpen(false);
       resetForm();
     },
@@ -156,10 +126,10 @@ const InfoTrip = () => {
     },
   });
 
-  const deleteCarMutation = useMutation({
-    mutationFn: deleteCar,
+  const deleteTripMutation = useMutation({
+    mutationFn: deleteTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries(["cars"]);
+      queryClient.invalidateQueries(["trips"]);
       setIsDeleteModalOpen(false);
     },
     onError: (err) => {
@@ -173,8 +143,6 @@ const InfoTrip = () => {
 
   const handleAddTrip = (e) => {
     e.preventDefault();
-
-    // Tạo một bản sao của formData để gửi đi
     const newTrip = {
       pickupPoint: formData.pickupPoint,
       dropOffPoint: formData.dropOffPoint,
@@ -186,64 +154,76 @@ const InfoTrip = () => {
       arrivalTime: formData.arrivalTime,
       ticketPrice: parseFloat(formData.ticketPrice),
       status: formData.status,
-
+      totalSeats: parseInt(formData.totalSeats),
+      seatsAvailable: parseInt(formData.seatsAvailable || formData.totalSeats),
       carId: formData.carId,
     };
-
-    console.log("Đang thêm chuyến xe mới:", newTrip);
-
     addTripMutation.mutate(newTrip);
   };
 
-  const handleEditCar = async (e) => {
+  const handleEditTrip = (e) => {
     e.preventDefault();
-    const url = await upload(file, "car");
-    const updatedCar = {
-      nameCar: formData.nameCar,
-      licensePlate: formData.licensePlate,
-      seats: parseInt(formData.seats),
-      vehicleType: formData.vehicleType,
-      image: url,
-      features: formData.features,
-      userId: {
-        username: formData.username,
-        email: formData.email,
-      },
+    const updatedTrip = {
+      pickupPoint: formData.pickupPoint,
+      dropOffPoint: formData.dropOffPoint,
+      pickupProvince: formData.pickupProvince,
+      dropOffProvince: formData.dropOffProvince,
+      departureDate: formData.departureDate,
+      departureTime: formData.departureTime,
+      arrivalDate: formData.arrivalDate,
+      arrivalTime: formData.arrivalTime,
+      ticketPrice: parseFloat(formData.ticketPrice),
+      status: formData.status,
+      totalSeats: parseInt(formData.totalSeats),
+      seatsAvailable: parseInt(formData.seatsAvailable),
+      carId: formData.carId,
     };
-    editCarMutation.mutate({ carId: currentCar._id, updatedCar });
+    console.log("check thong tin updatedTrip", updatedTrip);
+
+    editTripMutation.mutate({ tripId: currentTrip._id, updatedTrip });
   };
 
-  const handleDeleteCar = () => {
-    deleteCarMutation.mutate(infoDelete.id);
+  const handleDeleteTrip = () => {
+    deleteTripMutation.mutate(infoDelete.id);
   };
 
-  const openEditModal = (car) => {
-    setCurrentCar(car);
+  const openEditModal = (trip) => {
+    setCurrentTrip(trip);
     setFormData({
-      nameCar: car.nameCar,
-      licensePlate: car.licensePlate,
-      seats: car.seats.toString(),
-      vehicleType: car.vehicleType,
-      image: car?.image,
-      features: car.features,
-      username: car.userId.username,
-      email: car.userId.email,
+      pickupPoint: trip.pickupPoint || "",
+      dropOffPoint: trip.dropOffPoint || "",
+      pickupProvince: trip.pickupProvince || "",
+      dropOffProvince: trip.dropOffProvince || "",
+      ticketPrice: trip.ticketPrice?.toString() || "",
+      departureTime: trip.departureTime || "",
+      arrivalTime: trip.arrivalTime || "",
+      departureDate: trip.departureDate || "",
+      arrivalDate: trip.arrivalDate || "",
+      status: trip.status || "",
+      totalSeats: trip.totalSeats?.toString() || "",
+      seatsAvailable: trip.seatsAvailable?.toString() || "",
+      carId: trip.carId?._id || "",
     });
     setIsEditModalOpen(true);
   };
 
   const resetForm = () => {
     setFormData({
-      nameCar: "",
-      licensePlate: "",
-      seats: "",
-      vehicleType: "",
-      username: "",
-      email: "",
-      features: [],
+      pickupPoint: "",
+      dropOffPoint: "",
+      pickupProvince: "",
+      dropOffProvince: "",
+      ticketPrice: "",
+      departureTime: "",
+      arrivalTime: "",
+      departureDate: "",
+      arrivalDate: "",
+      status: "",
+      totalSeats: "",
+      seatsAvailable: "",
+      carId: "",
     });
-    setFile(null);
-    setCurrentCar(null);
+    setCurrentTrip(null);
   };
 
   const handleInputChange = (e) => {
@@ -261,12 +241,12 @@ const InfoTrip = () => {
   return (
     <div className="flex-1 p-6 bg-gray-50">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Quản lý xe</h2>
+        <h2 className="text-2xl font-bold">Quản lý chuyến xe</h2>
         <button
           onClick={() => setIsAddModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          Thêm xe
+          Thêm chuyến xe
         </button>
       </div>
 
@@ -304,85 +284,81 @@ const InfoTrip = () => {
                 </td>
               </tr>
             ) : (
-              trips.map((trip) => {
-                // Định dạng departureDate và departureTime
-
-                return (
-                  <tr key={trip._id}>
-                    <td className="py-2 px-4 border-b font-semibold">
-                      {trip.carId?.nameCar && trip.carId?.licensePlate
-                        ? `${trip.carId.nameCar} - ${trip.carId.licensePlate}`
-                        : "Thông tin xe"}
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      {trip.pickupPoint || "Chưa cập nhật"}
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      {trip.pickupProvince && trip.dropOffProvince
-                        ? `${trip.pickupProvince} - ${trip.dropOffProvince}`
-                        : "Chưa cập nhật"}
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      {trip.ticketPrice
-                        ? `${trip.ticketPrice} VNĐ`
-                        : "Chưa cập nhật"}
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      {trip.totalSeats && trip.seatsAvailable
-                        ? `${trip.totalSeats}/${trip.seatsAvailable}`
-                        : "Chưa cập nhật"}
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      {trip.departureDate && trip.departureTime ? (
-                        <>
-                          {format(parseISO(trip.departureDate), "dd/MM/yyyy")} -{" "}
-                          {trip.departureTime}
-                        </>
-                      ) : (
-                        "Chưa cập nhật"
-                      )}
-                    </td>
-
-                    <td className="py-2 px-4 border-b">
-                      {trip.status || "Chưa cập nhật"}
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      <button
-                        onClick={() => openEditModal(trip)}
-                        className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsDeleteModalOpen(true);
-                          setInfoDelete({
-                            InfoLicensePlate:
-                              trip.licensePlate || "Không có biển số",
-                            id: trip._id,
-                          });
-                        }}
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                        disabled={deleteCarMutation.isLoading}
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+              trips.map((trip) => (
+                <tr key={trip._id}>
+                  <td className="py-2 px-4 border-b font-semibold">
+                    {trip.carId
+                      ? `${trip.carId.nameCar} - ${trip.carId.licensePlate}`
+                      : "Xe chưa được gán"}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {trip.pickupPoint || "Chưa cập nhật"}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {trip.pickupProvince && trip.dropOffProvince
+                      ? `${trip.pickupProvince} - ${trip.dropOffProvince}`
+                      : "Chưa cập nhật"}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {trip.ticketPrice
+                      ? `${trip.ticketPrice} VNĐ`
+                      : "Chưa cập nhật"}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {trip.totalSeats && trip.seatsAvailable
+                      ? `${trip.totalSeats}/${trip.seatsAvailable}`
+                      : "Chưa cập nhật"}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {trip.departureDate && trip.departureTime ? (
+                      <>
+                        {format(new Date(trip.departureDate), "dd/MM/yyyy")} -{" "}
+                        {trip.departureTime}
+                      </>
+                    ) : (
+                      "Chưa cập nhật"
+                    )}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    {trip.status || "Chưa cập nhật"}
+                  </td>
+                  <td className="py-2 px-4 border-b">
+                    <button
+                      onClick={() => openEditModal(trip)}
+                      className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600"
+                    >
+                      Sửa
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsDeleteModalOpen(true);
+                        setInfoDelete({
+                          InfoLicensePlate:
+                            trip.pickupProvince && trip.dropOffProvince
+                              ? `${trip.pickupProvince} - ${trip.dropOffProvince}`
+                              : "Chưa cập nhật",
+                          id: trip._id,
+                        });
+                      }}
+                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                      disabled={deleteTripMutation.isLoading}
+                    >
+                      Xóa
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Phần còn lại của component (modals, pagination) giữ nguyên */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-2xl shadow-lg max-w-md w-full text-center">
-            <h3 className="text-xl font-bold mb-4">Xóa xe</h3>
+            <h3 className="text-xl font-bold mb-4">Xóa chuyến xe</h3>
             <span className="text-base font-normal">
-              Bạn chắc chắn muốn xóa xe với biển số:{" "}
+              Bạn chắc chắn muốn xóa chuyến xe :{" "}
               <p className="font-semibold">{infoDelete.InfoLicensePlate}</p>
             </span>
             <div className="flex justify-center gap-4 mt-5">
@@ -393,7 +369,7 @@ const InfoTrip = () => {
                 Hủy
               </button>
               <button
-                onClick={handleDeleteCar}
+                onClick={handleDeleteTrip}
                 className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
               >
                 Xóa
@@ -410,8 +386,6 @@ const InfoTrip = () => {
           handleInputChange={handleInputChange}
           addTripMutation={addTripMutation}
           setIsAddModalOpen={setIsAddModalOpen}
-          setFile={setFile}
-          setFormData={setFormData}
           resetForm={resetForm}
         />
       )}
@@ -419,14 +393,15 @@ const InfoTrip = () => {
       {isEditModalOpen && (
         <UpdateInfoTrip
           formData={formData}
-          handleEditCar={handleEditCar}
+          handleEditTrip={handleEditTrip}
           handleInputChange={handleInputChange}
           setIsEditModalOpen={setIsEditModalOpen}
           resetForm={resetForm}
-          setFile={setFile}
           setFormData={setFormData}
-          loading={editCarMutation.isLoading}
-          error={editCarMutation.isError ? editCarMutation.error.message : null}
+          loading={editTripMutation.isLoading}
+          error={
+            editTripMutation.isError ? editTripMutation.error.message : null
+          }
         />
       )}
 
@@ -435,4 +410,4 @@ const InfoTrip = () => {
   );
 };
 
-export default InfoTrip;
+export default TripManagement;
