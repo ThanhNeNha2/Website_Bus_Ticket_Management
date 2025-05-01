@@ -61,6 +61,8 @@ const Login = () => {
         toast.success("Đăng nhập thành công!");
         // Redirect based on role
         const role = res.data.role;
+        console.log("check thong tin ", res.data);
+
         if (role === "GARAGE") {
           navigate("/admin/ticket-management");
         } else {

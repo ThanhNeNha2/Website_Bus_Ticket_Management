@@ -12,6 +12,7 @@ import ClientLayout from "../Layouts/ClientLayout";
 import InfoUser from "../Components/InfoUser";
 import InfoTrip from "../Components/Admin/InfoTrip";
 import InfoCar from "../Components/Admin/InfoCar";
+import InfoPromotion from "../Components/Admin/InfoPromotion";
 
 // Component ProtectedRoute để kiểm tra token và vai trò
 const ProtectedRoute = ({ children, allowedRoles, requireAuth = true }) => {
@@ -82,6 +83,8 @@ const CustomRouter = () => {
           <Route path="/trip-management" element={<InfoTrip />} />
           <Route path="/user-management" element={<InfoUser />} />
           <Route path="/vehicle-management" element={<InfoCar />} />
+          <Route path="/promotion-management" element={<InfoPromotion />} />
+
           <Route path="/info" element={<InfoUser />} />
         </Route>
       )}

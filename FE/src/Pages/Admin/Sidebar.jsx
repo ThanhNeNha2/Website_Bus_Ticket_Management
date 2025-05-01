@@ -2,15 +2,24 @@ import React, { useState } from "react";
 import { FaBus, FaRegImage } from "react-icons/fa";
 import { FaCarOn } from "react-icons/fa6";
 import { IoTicketOutline } from "react-icons/io5";
-import { MdOutlineDescription } from "react-icons/md";
+import { MdDiscount, MdOutlineDescription } from "react-icons/md";
 import { TbLogout2 } from "react-icons/tb";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 const Sidebar = () => {
   const [activeItem, setActiveItem] = useState(null);
+  const navigate = useNavigate();
 
   const handleItemClick = (item) => {
     setActiveItem(item);
+  };
+
+  const handleLogout = () => {
+    // Xóa thông tin đăng nhập
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    // Chuyển hướng đến /login
+    navigate("/login", { replace: true });
   };
 
   const menuItems = [
@@ -25,13 +34,9 @@ const Sidebar = () => {
       path: "/trip-management",
     },
     {
-      name: "Thống kê",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M4 4h16v2H4V4zm0 4h16v2H4V8zm0 4h16v2H4v-2zm0 4h16v2H4v-2z" />
-        </svg>
-      ),
-      path: "/statistics",
+      name: "Quản lý mã giảm giá ",
+      icon: <MdDiscount />,
+      path: "/promotion-management",
     },
     { name: "Quản lý xe", icon: <FaCarOn />, path: "/vehicle-management" },
     { name: "Album ảnh", icon: <FaRegImage />, path: "/photo-album" },
@@ -68,7 +73,6 @@ const Sidebar = () => {
       ),
       path: "/account-transactions",
     },
-    { name: "Đăng xuất", icon: <TbLogout2 />, path: "/logout" },
   ];
 
   return (
@@ -101,6 +105,20 @@ const Sidebar = () => {
             </NavLink>
           </li>
         ))}
+        {/* Đăng xuất */}
+        <li>
+          <button
+            onClick={handleLogout}
+            className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors duration-200 w-full text-left ${
+              activeItem === "Đăng xuất"
+                ? "bg-blue-600 text-white"
+                : "hover:bg-gray-200 hover:text-blue-600"
+            }`}
+          >
+            <TbLogout2 />
+            <span>Đăng xuất</span>
+          </button>
+        </li>
       </ul>
     </div>
   );

@@ -1,6 +1,18 @@
 import React from "react";
 import { useState } from "react";
 import SeeDetail from "../../Components/Home/ListRoutertrip/SeeDetail";
+import { api } from "../../Util/axios";
+import { useQuery } from "@tanstack/react-query";
+
+const getAllTrips = async () => {
+  const res = await api.get("/trips");
+  console.log("kkkk", res);
+
+  return {
+    trips: res.data.data.trips,
+    totals: res.data.data.total,
+  };
+};
 const ListRoutertrip = () => {
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
@@ -30,6 +42,12 @@ const ListRoutertrip = () => {
       price: "Từ 180.000đ",
     },
   ];
+
+  const { trips = [], totals = 1 } = useQuery({
+    queryKey: ["tripsClient"],
+    queryFn: () => getAllTrips(),
+  });
+  console.log("check thong tin ", trips);
 
   return (
     <div className="bg-black text-white py-12 mt-14">
@@ -95,7 +113,9 @@ const ListRoutertrip = () => {
               >
                 {/* Hình ảnh */}
                 <img
-                  src={route.image}
+                  src={
+                    "https://i.pinimg.com/736x/ba/c0/cf/bac0cfc9e389668b93f60a046096e4a4.jpg"
+                  }
                   alt={route.title}
                   className="w-full h-full object-cover"
                 />

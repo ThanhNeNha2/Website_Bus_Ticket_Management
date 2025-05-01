@@ -1,11 +1,20 @@
 import React, { useState } from "react";
 import logo from "../images/Logo1.png";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Header = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
+  const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    // Xóa thông tin đăng nhập
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    // Chuyển hướng đến /login
+    navigate("/login", { replace: true });
+    setIsDropdownOpen(false); // Đóng dropdown
+  };
 
   return (
     <nav className="bg-black text-white fixed top-0 right-0 left-0 z-[999] px-4 border-b border-gray-600">
@@ -49,7 +58,7 @@ const Header = () => {
               Tin tức
             </Link>
           </li>
-          {user ? (
+          {user.username ? (
             <li className="relative">
               <div
                 className="flex items-center space-x-2 cursor-pointer"
@@ -75,17 +84,18 @@ const Header = () => {
                     <Link
                       to="/info"
                       className="block px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
+                      onClick={() => setIsDropdownOpen(false)}
                     >
                       Thông tin tài khoản
                     </Link>
                   </li>
                   <li>
-                    <Link
-                      to="/login"
-                      className="block px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
                     >
                       Đăng xuất
-                    </Link>
+                    </button>
                   </li>
                 </ul>
               )}
