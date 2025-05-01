@@ -5,6 +5,7 @@ const {
   getAllCars,
   updateCar,
   deleteCar,
+  getAllCarsNoPage,
 } = require("../controllers/carController");
 const {
   verifyTokenAndRoleAndID,
@@ -21,6 +22,9 @@ router.get("/cars/:id", verifyToken, getCarById);
 
 // Route: Lấy danh sách tất cả xe ( USER và ADMIN thì được lấy tất cả ) ( Nhà xe thì chỉ đươc lấy của nhà xe )
 router.get("/cars", verifyToken, getAllCars);
+
+// Route: Lấy tất cả không phân trang
+router.get("/carsnopage", verifyTokenAndRoleAuth(["GARAGE"]), getAllCarsNoPage);
 
 // Route: Cập nhật xe
 router.put("/cars/:id", verifyTokenAndRoleAuth(["GARAGE"]), updateCar);

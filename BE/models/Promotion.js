@@ -51,13 +51,19 @@ const promotionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Expired"],
-      default: "Active",
+      enum: ["Không kích hoạt", "Kích hoạt", "Hết hạn"],
+      default: "Kích hoạt",
+    },
+    garageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true, // Bắt buộc để liên kết với nhà xe
     },
   },
   { timestamps: true }
 );
 
-promotionSchema.index({ code: 1 });
+promotionSchema.index({ code: 1 }, { unique: true });
+promotionSchema.index({ garageId: 1 });
 
 module.exports = mongoose.model("Promotion", promotionSchema);

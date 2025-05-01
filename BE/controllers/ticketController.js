@@ -158,21 +158,64 @@ const createTicket = async (req, res) => {
 const getAllTickets = async (req, res) => {
   try {
     const { userId, tripId, status, page = 1, limit = 10 } = req.query;
+    const user = req.user; // Giả định req.user từ middleware xác thực
+
+    // Kiểm tra thông tin user
+    if (!user || !user.id || !user.role) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "No user information or role provided",
+      });
+    }
+
+    // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được truy cập
+    if (!["GARAGE", "ADMIN"].includes(user.role)) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "You do not have permission to view tickets",
+      });
+    }
 
     // Xây dựng bộ lọc
     const filter = {};
-    if (userId) filter.userId = userId;
-    if (tripId) filter.tripId = tripId;
-    if (status) filter.status = status;
+    if (userId && mongoose.isValidObjectId(userId)) {
+      filter.userId = userId;
+    }
+    if (tripId && mongoose.isValidObjectId(tripId)) {
+      filter.tripId = tripId;
+    }
+    if (status) {
+      filter.status = status;
+    }
+
+    // Nếu là GARAGE, chỉ lấy vé của các chuyến xe thuộc xe do nhà xe quản lý
+    if (user.role === "GARAGE") {
+      // Tìm các xe thuộc nhà xe
+      const cars = await Car.find({ userId: user.id }).select("_id").lean();
+      const carIds = cars.map((car) => car._id);
+
+      // Tìm các chuyến xe sử dụng các xe này
+      const trips = await Trip.find({ carId: { $in: carIds } })
+        .select("_id")
+        .lean();
+      const tripIds = trips.map((trip) => trip._id);
+
+      // Chỉ lấy vé thuộc các chuyến xe này
+      filter.tripId = { $in: tripIds };
+    }
 
     // Phân trang
     const tickets = await Ticket.find(filter)
-      .populate("tripId", "pickupPoint dropOffPoint departureTime arrivalTime")
+      .populate(
+        "tripId",
+        "pickupPoint dropOffPoint departureTime arrivalTime pickupProvince dropOffProvince departureDate"
+      )
       .populate("carId", "nameCar licensePlate")
       .populate("userId", "username email")
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     const total = await Ticket.countDocuments(filter);
 
@@ -228,6 +271,36 @@ const getTicketById = async (req, res) => {
     return res.status(500).json({
       errCode: 1,
       message: "Internal server error",
+    });
+  }
+};
+
+//  vé mà chính mình đã đặt
+const getMyTickets = async (req, res) => {
+  try {
+    const userId = req.user.id; // lấy user đang đăng nhập từ middleware
+
+    const myTickets = await Ticket.find({ userId })
+      .populate({
+        path: "tripId",
+        select: "pickupProvince dropOffProvince departureDate departureTime",
+      })
+      .populate({
+        path: "carId",
+        select: "nameCar licensePlate",
+      })
+      .sort({ createdAt: -1 }); // mới nhất trước
+
+    return res.status(200).json({
+      errCode: 0,
+      message: "Lấy vé thành công",
+      tickets: myTickets,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy vé:", error);
+    return res.status(500).json({
+      errCode: 1,
+      message: "Lỗi máy chủ nội bộ",
     });
   }
 };
@@ -396,4 +469,5 @@ module.exports = {
   getTicketById,
   updateTicket,
   deleteTicket,
+  getMyTickets,
 };

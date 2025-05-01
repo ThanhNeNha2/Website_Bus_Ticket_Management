@@ -37,6 +37,7 @@ const createTrip = async (req, res) => {
         message: "Missing required fields",
       });
     }
+    console.log("req.body  ", req.body);
 
     // Kiểm tra carId hợp lệ
     const car = await Car.findById(carId);
@@ -114,6 +115,23 @@ const getAllTrips = async (req, res) => {
       page = 1,
       limit = 2,
     } = req.query;
+    const user = req.user; // Giả định req.user từ middleware xác thực
+
+    // Kiểm tra thông tin user
+    if (!user || !user.id || !user.role) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "No user information or role provided",
+      });
+    }
+
+    // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được truy cập
+    if (!["GARAGE", "ADMIN"].includes(user.role)) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "You do not have permission to view trips",
+      });
+    }
 
     // Xây dựng bộ lọc
     const filter = {};
@@ -127,12 +145,21 @@ const getAllTrips = async (req, res) => {
       filter.departureDate = { $gte: startOfDay, $lte: endOfDay };
     }
 
+    // Nếu là GARAGE, chỉ lấy chuyến đi thuộc xe của nhà xe
+    if (user.role === "GARAGE") {
+      // Tìm các xe thuộc nhà xe
+      const cars = await Car.find({ userId: user.id }).select("_id").lean();
+      const carIds = cars.map((car) => car._id);
+      filter.carId = { $in: carIds };
+    }
+
     // Phân trang
     const trips = await Trip.find(filter)
       .populate("carId", "nameCar licensePlate seats")
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .sort({ departureDate: 1 });
+      .sort({ departureDate: 1 })
+      .lean();
 
     const total = await Trip.countDocuments(filter);
 
@@ -198,6 +225,8 @@ const updateTrip = async (req, res) => {
     const {
       pickupPoint,
       dropOffPoint,
+      pickupProvince,
+      dropOffProvince,
       ticketPrice,
       departureTime,
       arrivalTime,
@@ -205,13 +234,17 @@ const updateTrip = async (req, res) => {
       arrivalDate,
       carId,
       status,
+      totalSeats,
+      seatsAvailable,
     } = req.body;
+
+    console.log("Thông tin update truyền về:", req.body);
 
     // Kiểm tra ID hợp lệ
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         errCode: 1,
-        message: "Invalid trip ID",
+        message: "ID chuyến xe không hợp lệ",
       });
     }
 
@@ -219,35 +252,39 @@ const updateTrip = async (req, res) => {
     if (
       !pickupPoint &&
       !dropOffPoint &&
+      !pickupProvince &&
+      !dropOffProvince &&
       !ticketPrice &&
       !departureTime &&
       !arrivalTime &&
       !departureDate &&
       !arrivalDate &&
       !carId &&
-      !status
+      !status &&
+      totalSeats === undefined &&
+      seatsAvailable === undefined
     ) {
       return res.status(400).json({
         errCode: 1,
-        message: "No fields provided for update",
+        message: "Không có trường nào được cung cấp để cập nhật",
       });
     }
 
-    // Tìm trip
+    // Tìm chuyến xe hiện tại
     const trip = await Trip.findById(id);
     if (!trip) {
       return res.status(404).json({
         errCode: 1,
-        message: "Trip not found",
+        message: "Không tìm thấy chuyến xe",
       });
     }
 
-    // Kiểm tra quyền sở hữu hoặc vai trò
+    // Kiểm tra quyền cập nhật
     const user = req.user;
     if (!user || !user.id || !user.role) {
       return res.status(403).json({
         errCode: 1,
-        message: "No user information or role provided",
+        message: "Không có thông tin người dùng hoặc vai trò",
       });
     }
 
@@ -255,7 +292,7 @@ const updateTrip = async (req, res) => {
     if (!car) {
       return res.status(404).json({
         errCode: 1,
-        message: "Car not found",
+        message: "Không tìm thấy xe",
       });
     }
 
@@ -264,27 +301,59 @@ const updateTrip = async (req, res) => {
     if (!isOwner && !hasPermission) {
       return res.status(403).json({
         errCode: 1,
-        message: "You do not have permission to update this trip",
+        message: "Bạn không có quyền cập nhật chuyến xe này",
       });
     }
 
-    // Tạo object chứa các trường cần cập nhật
+    // Chuẩn bị object cập nhật
     const updateFields = {};
+
     if (pickupPoint) updateFields.pickupPoint = pickupPoint;
     if (dropOffPoint) updateFields.dropOffPoint = dropOffPoint;
+    if (pickupProvince) updateFields.pickupProvince = pickupProvince;
+    if (dropOffProvince) updateFields.dropOffProvince = dropOffProvince;
     if (ticketPrice) updateFields.ticketPrice = ticketPrice;
     if (departureTime) updateFields.departureTime = departureTime;
     if (arrivalTime) updateFields.arrivalTime = arrivalTime;
-    if (departureDate) updateFields.departureDate = departureDate;
-    if (arrivalDate) updateFields.arrivalDate = arrivalDate;
+
+    // FIX: Properly handle dates without modifying their format
+    if (departureDate) {
+      updateFields.departureDate = new Date(departureDate);
+    }
+    if (arrivalDate) {
+      updateFields.arrivalDate = new Date(arrivalDate);
+    }
+
+    if (status) updateFields.status = status;
+
+    // Xử lý carId và số ghế
     if (carId) {
       updateFields.carId = carId;
       updateFields.totalSeats = car.seats;
-      updateFields.seatsAvailable = car.seats; // Reset seatsAvailable khi đổi xe
+      updateFields.seatsAvailable = car.seats;
     }
-    if (status) updateFields.status = status;
 
-    // Cập nhật trip
+    // FIX: Store the currentTotalSeats to use in validation
+    const currentTotalSeats =
+      totalSeats !== undefined ? parseInt(totalSeats, 10) : trip.totalSeats;
+
+    if (totalSeats !== undefined) {
+      updateFields.totalSeats = parseInt(totalSeats, 10);
+    }
+
+    if (seatsAvailable !== undefined) {
+      updateFields.seatsAvailable = parseInt(seatsAvailable, 10);
+
+      // FIX: Check against the correct total seats value
+      if (updateFields.seatsAvailable > currentTotalSeats) {
+        return res.status(400).json({
+          errCode: 1,
+          message: `Số ghế còn trống (${updateFields.seatsAvailable}) không được vượt quá tổng số ghế (${currentTotalSeats})`,
+        });
+      }
+    }
+
+    // Thực hiện cập nhật
     const updatedTrip = await Trip.findByIdAndUpdate(
       id,
       { $set: updateFields },
@@ -294,20 +363,21 @@ const updateTrip = async (req, res) => {
     if (!updatedTrip) {
       return res.status(404).json({
         errCode: 1,
-        message: "Trip not found",
+        message: "Không tìm thấy chuyến xe sau cập nhật",
       });
     }
 
     return res.status(200).json({
       errCode: 0,
-      message: "Trip updated successfully",
+      message: "Cập nhật chuyến xe thành công",
       trip: updatedTrip,
     });
   } catch (error) {
-    console.error("Error updating trip:", error);
+    console.error("Lỗi khi cập nhật chuyến xe:", error);
     return res.status(500).json({
       errCode: 1,
-      message: "Internal server error",
+      message: "Lỗi máy chủ nội bộ",
+      error: error.message, // Add this to provide more details about the error
     });
   }
 };
@@ -359,7 +429,7 @@ const deleteTrip = async (req, res) => {
     }
 
     // Chỉ cho phép xóa nếu trạng thái là Scheduled hoặc Canceled
-    if (!["Scheduled", "Canceled"].includes(trip.status)) {
+    if (!["Chưa xuất phát", "Đã hủy", "Đã đến"].includes(trip.status)) {
       return res.status(400).json({
         errCode: 1,
         message: "Cannot delete trip in progress or completed",
@@ -381,10 +451,82 @@ const deleteTrip = async (req, res) => {
   }
 };
 
+//  Ngoài pham vi của trip
+
+// Lấy Trip cho promotion
+const getAllTripNoPage = async (req, res) => {
+  try {
+    const { pickupPoint, dropOffPoint, departureDate } = req.query;
+    const user = req.user; // Giả định req.user từ middleware xác thực
+
+    // Kiểm tra thông tin user
+    if (!user || !user.id || !user.role) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "No user information or role provided",
+      });
+    }
+
+    // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được truy cập
+    if (!["GARAGE", "ADMIN"].includes(user.role)) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "You do not have permission to view trips",
+      });
+    }
+
+    // Xây dựng bộ lọc
+    const filter = {};
+    if (pickupPoint) filter.pickupPoint = pickupPoint;
+    if (dropOffPoint) filter.dropOffPoint = dropOffPoint;
+    if (departureDate) {
+      const startOfDay = new Date(departureDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(departureDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      filter.departureDate = { $gte: startOfDay, $lte: endOfDay };
+    }
+
+    // Nếu là GARAGE, chỉ lấy chuyến đi thuộc xe của nhà xe
+    if (user.role === "GARAGE") {
+      // Tìm các xe thuộc nhà xe
+      const cars = await Car.find({ userId: user.id }).select("_id").lean();
+      const carIds = cars.map((car) => car._id);
+      if (carIds.length === 0) {
+        return res.status(200).json({
+          errCode: 0,
+          message: "No trips found for your garage",
+          data: { trips: [] },
+        });
+      }
+      filter.carId = { $in: carIds };
+    }
+
+    // Lấy tất cả chuyến đi với dropOffProvince, pickupProvince, _id
+    const trips = await Trip.find(filter)
+      .select("dropOffProvince pickupProvince _id")
+      .sort({ departureDate: 1 })
+      .lean();
+
+    return res.status(200).json({
+      errCode: 0,
+      message: "Trips retrieved successfully",
+      data: { trips },
+    });
+  } catch (error) {
+    console.error("Error retrieving trips:", error);
+    return res.status(500).json({
+      errCode: 1,
+      message: "Internal server error",
+    });
+  }
+};
+
 module.exports = {
   createTrip,
   getAllTrips,
   getTripById,
   updateTrip,
   deleteTrip,
+  getAllTripNoPage,
 };

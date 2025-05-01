@@ -7,25 +7,94 @@ const tripSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      enum: ["Bến xe Miền Đông", "Bến xe Đà Nẵng", "Bến xe Nha Trang"],
+      enum: [
+        "Bến xe Miền Đông",
+        "Bến xe Miền Tây",
+        "Bến xe Lương Yên",
+        "Bến xe Gia Lâm",
+        "Bến xe Đà Nẵng",
+        "Bến xe Nha Trang",
+      ],
     },
     // Điểm đến
     dropOffPoint: {
       type: String,
       required: true,
       trim: true,
+      enum: [
+        "Bến xe Miền Đông",
+        "Bến xe Miền Tây",
+        "Bến xe Lương Yên",
+        "Bến xe Gia Lâm",
+        "Bến xe Đà Nẵng",
+        "Bến xe Nha Trang",
+      ],
     },
 
     //  Tỉnh xuất phát
     pickupProvince: {
       type: String,
       required: true,
+      enum: [
+        "Hà Nội",
+        "Đà Nẵng",
+        "TP. Hồ Chí Minh",
+        "Hải Phòng",
+        "Cần Thơ",
+        "Bình Dương",
+        "Đồng Nai",
+        "Quảng Ninh",
+        "Thừa Thiên Huế",
+        "Lâm Đồng",
+        "Khánh Hòa",
+        "Nghệ An",
+        "Thanh Hóa",
+        "Bình Định",
+        "An Giang",
+        "Vĩnh Long",
+        "Sóc Trăng",
+        "Kiên Giang",
+        "Tây Ninh",
+        "Phú Yên",
+        "Bà Rịa - Vũng Tàu",
+        "Gia Lai",
+        "Đắk Lắk",
+        "Quảng Nam",
+        "Hậu Giang",
+      ],
       trim: true,
     },
     // Tỉnh đi đến
     dropOffProvince: {
       type: String,
       required: true,
+      enum: [
+        "Hà Nội",
+        "Đà Nẵng",
+        "TP. Hồ Chí Minh",
+        "Hải Phòng",
+        "Cần Thơ",
+        "Bình Dương",
+        "Đồng Nai",
+        "Quảng Ninh",
+        "Thừa Thiên Huế",
+        "Lâm Đồng",
+        "Khánh Hòa",
+        "Nghệ An",
+        "Thanh Hóa",
+        "Bình Định",
+        "An Giang",
+        "Vĩnh Long",
+        "Sóc Trăng",
+        "Kiên Giang",
+        "Tây Ninh",
+        "Phú Yên",
+        "Bà Rịa - Vũng Tàu",
+        "Gia Lai",
+        "Đắk Lắk",
+        "Quảng Nam",
+        "Hậu Giang",
+      ],
       trim: true,
     },
     // Gía vé
@@ -34,29 +103,19 @@ const tripSchema = new mongoose.Schema(
       required: true,
       min: 0, // Giá vé không được âm
     },
-    // Thời gian xuất phát
-    departureTime: {
-      type: Date,
-      required: true,
-    },
-    // Thời gian đến
-    arrivalTime: {
-      type: Date,
-      required: true,
-      validate: {
-        validator: function (value) {
-          return this.departureTime < value; // arrivalTime phải sau departureTime
-        },
-        message: "Arrival time must be after departure time",
-      },
-    },
-    // Ngày đi
-    departureDate: {
-      type: Date,
-      required: true,
-    },
 
+    // Thời gian đến
+    arrivalTime: { type: String, required: true },
+    // Thời gian đi
+    departureTime: { type: String, required: true },
+
+    // Ngày di
     arrivalDate: {
+      type: Date,
+      required: true,
+    },
+    // Ngày đến
+    departureDate: {
       type: Date,
       required: true,
     },
@@ -67,7 +126,7 @@ const tripSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Scheduled", "Completed", "Canceled", "InProgress"],
+      enum: ["Đã đến", "Đã xuất phát", "Chưa xuất phát", "Đã hủy"],
       default: "Scheduled",
     },
     totalSeats: {
@@ -79,12 +138,6 @@ const tripSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
-      validate: {
-        validator: function (value) {
-          return value <= this.totalSeats; // Số ghế còn lại không được vượt quá tổng số ghế
-        },
-        message: "Seats available cannot exceed total seats",
-      },
     },
   },
   { timestamps: true }

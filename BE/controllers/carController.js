@@ -142,6 +142,53 @@ const getAllCars = async (req, res) => {
   }
 };
 
+const getAllCarsNoPage = async (req, res) => {
+  try {
+    const { licensePlate, vehicleType } = req.query;
+    const user = req.user;
+
+    if (!user || !user.id || !user.role) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "No user information or role provided",
+      });
+    }
+
+    const filter = {};
+    if (user.role === "GARAGE") {
+      filter.userId = user.id;
+    }
+    if (licensePlate)
+      filter.licensePlate = { $regex: licensePlate, $options: "i" };
+    if (vehicleType && mongoose.isValidObjectId(vehicleType)) {
+      filter.vehicleType = vehicleType;
+    }
+
+    const cars = await Car.find(filter)
+      .select("nameCar licensePlate seats") // 🛠 Chỉ lấy các trường cần thiết
+      .populate("userId", "username email")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const total = await Car.countDocuments(filter);
+
+    return res.status(200).json({
+      errCode: 0,
+      message: "Cars retrieved successfully",
+      data: {
+        cars,
+        total,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching cars:", error);
+    return res.status(500).json({
+      errCode: 1,
+      message: "Internal server error",
+    });
+  }
+};
+
 // Get a car by ID
 const getCarById = async (req, res) => {
   try {
@@ -400,4 +447,5 @@ module.exports = {
   getCarById,
   updateCar,
   deleteCar,
+  getAllCarsNoPage,
 };
