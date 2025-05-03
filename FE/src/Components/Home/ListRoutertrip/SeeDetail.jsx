@@ -1,41 +1,46 @@
 import React, { useState } from "react";
 
-const SeeDetail = () => {
+const SeeDetail = ({ trips }) => {
   const [selectedTab, setSelectedTab] = useState("Giới thiệu");
 
-  const tabs = [
-    { label: "Giới thiệu" },
-    { label: "Số điện thoại / Địa chỉ" },
-    { label: "Đánh giá" },
-  ];
+  const tabs = [{ label: "Giới thiệu" }, { label: "Thông tin chuyến" }];
 
   return (
-    <div className="  bg-white rounded-lg shadow-md w-full p-3">
+    <div className="bg-white rounded-xl shadow-lg w-full p-6 border border-gray-200">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-black">Nhà xe Phú Xuyên</h2>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {trips?.userId?.username || "Nhà xe ..... "}
+        </h2>
       </div>
 
       {/* Hình ảnh */}
-      <div className="flex space-x-2 mb-4">
-        <div className="w-2/3 h-32 bg-gray-200 rounded-md flex items-center justify-center">
-          <span className="text-gray-500">Hình ảnh xe</span>
-        </div>
-        <div className="w-1/3 h-32 bg-gray-200 rounded-md flex items-center justify-center">
-          <span className="text-gray-500">Hình ảnh xe</span>
+      <div className="mb-6">
+        <div className="w-full h-48 rounded-lg overflow-hidden shadow-md">
+          {trips?.userId?.image ? (
+            <img
+              src={trips.userId.image}
+              alt="Hình ảnh nhà xe"
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+              <span className="text-gray-400">Hình ảnh nhà xe</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Thông tin */}
-      <div className="flex space-x-4 mb-4 text-sm border-b border-gray-300">
+      {/* Tabs */}
+      <div className="flex space-x-6 mb-6 text-base border-b border-gray-200">
         {tabs.map((tab) => (
           <div
             key={tab.label}
             onClick={() => setSelectedTab(tab.label)}
-            className={`cursor-pointer pb-2 text-orange-600 ${
+            className={`cursor-pointer pb-3 font-medium transition-colors duration-200 ${
               selectedTab === tab.label
-                ? "border-b-2 border-orange-600 font-semibold"
-                : ""
+                ? "text-orange-600 border-b-2 border-orange-600"
+                : "text-gray-600 hover:text-orange-500"
             }`}
           >
             {tab.label}
@@ -43,8 +48,58 @@ const SeeDetail = () => {
         ))}
       </div>
 
-      {/* Đang cập nhật thông tin */}
-      <p className="text-gray-600">Đang cập nhật thông tin</p>
+      {/* Nội dung tab */}
+      <div className="text-gray-700 text-sm">
+        {selectedTab === "Giới thiệu" && (
+          <div className="space-y-3">
+            <p>
+              <span className="font-semibold text-gray-900">Tên nhà xe:</span>{" "}
+              {trips?.userId?.username || "Chưa có thông tin"}
+            </p>
+            <p>
+              <span className="font-semibold text-gray-900">
+                Số điện thoại:
+              </span>{" "}
+              {trips?.userId?.phone || "Chưa có thông tin"}
+            </p>
+            <p>
+              <span className="font-semibold text-gray-900">Email:</span>{" "}
+              {trips?.userId?.email || "Chưa có thông tin"}
+            </p>
+            <p>
+              <span className="font-semibold text-gray-900">Mô tả:</span>{" "}
+              {trips?.userId?.description || "Chưa có mô tả"}
+            </p>
+          </div>
+        )}
+
+        {selectedTab === "Thông tin chuyến" && (
+          <div className="space-y-3">
+            <p>
+              <span className="font-semibold text-gray-900">Loại xe:</span>{" "}
+              {trips?.carId?.nameCar || "Chưa có thông tin"}
+            </p>
+            <p>
+              <span className="font-semibold text-gray-900">Số ghế:</span>{" "}
+              {trips?.carId?.seats || "Chưa có thông tin"}
+            </p>
+            <p>
+              <span className="font-semibold text-gray-900">Điểm đón:</span>{" "}
+              {trips?.pickupPoint || "Chưa có thông tin"}
+            </p>
+            <p>
+              <span className="font-semibold text-gray-900">Điểm trả:</span>{" "}
+              {trips?.dropOffPoint || "Chưa có thông tin"}
+            </p>
+            <p>
+              <span className="font-semibold text-gray-900">Giá vé:</span>{" "}
+              {trips?.ticketPrice
+                ? `${trips.ticketPrice} VNĐ`
+                : "Chưa có thông tin"}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

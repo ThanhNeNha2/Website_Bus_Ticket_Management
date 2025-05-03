@@ -13,6 +13,7 @@ import InfoUser from "../Components/InfoUser";
 import InfoTrip from "../Components/Admin/InfoTrip";
 import InfoCar from "../Components/Admin/InfoCar";
 import InfoPromotion from "../Components/Admin/InfoPromotion";
+import BookTicket from "../Pages/BookTicket/BookTicket";
 
 // Component ProtectedRoute để kiểm tra token và vai trò
 const ProtectedRoute = ({ children, allowedRoles, requireAuth = true }) => {
@@ -65,6 +66,14 @@ const CustomRouter = () => {
           element={
             <ProtectedRoute>
               <News />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bookticket/:id"
+          element={
+            <ProtectedRoute>
+              <BookTicket />
             </ProtectedRoute>
           }
         />
