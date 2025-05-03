@@ -124,6 +124,11 @@ const tripSchema = new mongoose.Schema(
       ref: "Car",
       required: true,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     status: {
       type: String,
       enum: ["Đã đến", "Đã xuất phát", "Chưa xuất phát", "Đã hủy"],

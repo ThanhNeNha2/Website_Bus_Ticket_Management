@@ -320,7 +320,7 @@ const updatePromotion = async (req, res) => {
       status,
     } = req.body;
     const user = req.user;
-    console.log(" check thong tin ", req.body);
+    console.log("check thong tin", req.body);
 
     // Kiểm tra ID hợp lệ
     if (!mongoose.isValidObjectId(id)) {
@@ -370,64 +370,119 @@ const updatePromotion = async (req, res) => {
       }
     }
 
+    // Kiểm tra dữ liệu đầu vào
+    const validDiscountTypes = ["Percentage", "Fixed"];
+    const validStatuses = ["Không kích hoạt", "Kích hoạt", "Hết hạn"];
+    if (discountType && !validDiscountTypes.includes(discountType)) {
+      return res.status(400).json({
+        errCode: 1,
+        message: "Invalid discount type",
+      });
+    }
+    if (discountValue && discountValue <= 0) {
+      return res.status(400).json({
+        errCode: 1,
+        message: "Discount value must be greater than 0",
+      });
+    }
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({
+        errCode: 1,
+        message: "Invalid status",
+      });
+    }
+
+    // Kiểm tra ngày nếu được cập nhật
+    if (startDate || endDate) {
+      const newStartDate = startDate
+        ? new Date(startDate)
+        : promotion.startDate;
+      const newEndDate = endDate ? new Date(endDate) : promotion.endDate;
+      if (isNaN(newStartDate) || isNaN(newEndDate)) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid date format",
+        });
+      }
+      if (newEndDate <= newStartDate) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "End date must be after start date",
+        });
+      }
+    }
+
     // Kiểm tra applicableTrips nếu được cập nhật
     let validatedTrips = promotion.applicableTrips;
     if (applicableTrips && applicableTrips.length > 0) {
-      const trips = await Trip.find({ _id: { $in: applicableTrips } }).lean();
-      if (trips.length !== applicableTrips.length) {
+      if (
+        !Array.isArray(applicableTrips) ||
+        applicableTrips.some((id) => !mongoose.isValidObjectId(id))
+      ) {
         return res.status(400).json({
           errCode: 1,
-          message: "One or more trip IDs are invalid",
+          message: "Invalid trip IDs in applicableTrips",
         });
       }
 
-      // Kiểm tra xe của chuyến thuộc nhà xe
+      const trips = await Trip.find({ _id: { $in: applicableTrips } }).lean();
+      const invalidTripIds = applicableTrips.filter(
+        (id) => !trips.some((trip) => trip._id.equals(id))
+      );
+      if (invalidTripIds.length > 0) {
+        return res.status(400).json({
+          errCode: 1,
+          message: `Invalid trip IDs: ${invalidTripIds.join(", ")}`,
+        });
+      }
+
       const carIds = trips.map((trip) => trip.carId);
       const cars = await Car.find({
         _id: { $in: carIds },
         userId: user.id,
       }).lean();
+      const invalidCarIds = carIds.filter(
+        (carId) => !cars.some((car) => car._id.equals(carId))
+      );
+      const invalidTrips = trips
+        .filter((trip) =>
+          invalidCarIds.some((carId) => carId.equals(trip.carId))
+        )
+        .map((trip) => trip._id);
       if (cars.length !== carIds.length && user.role !== "ADMIN") {
         return res.status(403).json({
           errCode: 1,
-          message: "Some trips are not associated with your garage's cars",
+          message: `Some trips are not associated with your garage's cars: ${invalidTrips.join(
+            ", "
+          )}`,
         });
       }
       validatedTrips = applicableTrips;
     }
 
-    // Tạo object chứa các trường cần cập nhật
+    // Cập nhật promotion thủ công
     const updateFields = {};
-    if (code) updateFields.code = code;
-    if (description) updateFields.description = description;
-    if (discountType) updateFields.discountType = discountType;
-    if (discountValue) updateFields.discountValue = discountValue;
-    if (startDate) updateFields.startDate = startDate;
-    if (endDate) updateFields.endDate = endDate;
-    if (applicableTrips) updateFields.applicableTrips = validatedTrips;
-    if (maxUses !== undefined) updateFields.maxUses = maxUses;
-    if (status) updateFields.status = status;
+    if (code) promotion.code = code;
+    if (description) promotion.description = description;
+    if (discountType) promotion.discountType = discountType;
+    if (discountValue) promotion.discountValue = discountValue;
+    if (startDate) promotion.startDate = startDate;
+    if (endDate) promotion.endDate = endDate;
+    if (applicableTrips) promotion.applicableTrips = validatedTrips;
+    if (maxUses !== undefined) promotion.maxUses = maxUses;
+    if (status) promotion.status = status;
 
-    // Cập nhật promotion
-    const updatedPromotion = await Promotion.findOneAndUpdate(
-      filter,
-      { $set: updateFields },
-      { new: true, runValidators: true }
-    )
+    await promotion.save();
+
+    // Populate applicableTrips
+    const populatedPromotion = await Promotion.findById(promotion._id)
       .populate("applicableTrips", "pickupPoint dropOffPoint departureTime")
       .lean();
-
-    if (!updatedPromotion) {
-      return res.status(404).json({
-        errCode: 1,
-        message: "Promotion not found or you do not have permission",
-      });
-    }
 
     return res.status(200).json({
       errCode: 0,
       message: "Promotion updated successfully",
-      data: { promotion: updatedPromotion },
+      data: { promotion: populatedPromotion },
     });
   } catch (error) {
     console.error("Error updating promotion:", error);
@@ -435,6 +490,14 @@ const updatePromotion = async (req, res) => {
       return res.status(400).json({
         errCode: 1,
         message: "Duplicate key error: Promotion code already exists",
+      });
+    }
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        errCode: 1,
+        message: `Validation error: ${Object.values(error.errors)
+          .map((e) => e.message)
+          .join(", ")}`,
       });
     }
     return res.status(500).json({

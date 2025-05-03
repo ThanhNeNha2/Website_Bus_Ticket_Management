@@ -37,10 +37,10 @@ const createTrip = async (req, res) => {
         message: "Missing required fields",
       });
     }
-    console.log("req.body  ", req.body);
+    console.log("req.body", req.body);
 
     // Kiểm tra carId hợp lệ
-    const car = await Car.findById(carId);
+    const car = await Car.findById(carId).lean();
     if (!car) {
       return res.status(404).json({
         errCode: 1,
@@ -49,7 +49,7 @@ const createTrip = async (req, res) => {
     }
 
     // Kiểm tra quyền sở hữu hoặc vai trò
-    const user = req.user; // Giả định req.user từ middleware xác thực
+    const user = req.user;
     if (!user || !user.id || !user.role) {
       return res.status(403).json({
         errCode: 1,
@@ -58,11 +58,25 @@ const createTrip = async (req, res) => {
     }
 
     const isOwner = car.userId.toString() === user.id;
-    const hasPermission = user.role === "GARAGE";
+    const hasPermission = user.role === "GARAGE" || user.role === "ADMIN";
     if (!isOwner && !hasPermission) {
       return res.status(403).json({
         errCode: 1,
         message: "You do not have permission to create this trip",
+      });
+    }
+
+    // Kiểm tra status hợp lệ
+    const validStatuses = [
+      "Đã đến",
+      "Đã xuất phát",
+      "Chưa xuất phát",
+      "Đã hủy",
+    ];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({
+        errCode: 1,
+        message: "Invalid status",
       });
     }
 
@@ -76,20 +90,21 @@ const createTrip = async (req, res) => {
       departureDate,
       arrivalDate,
       carId,
+      userId: user.id,
+      status: status || "Chưa xuất phát",
       dropOffProvince,
       pickupProvince,
-      status: status || "Scheduled",
       totalSeats: car.seats,
       seatsAvailable: car.seats,
     });
 
     await trip.save();
 
-    // Populate carId
-    const populatedTrip = await Trip.findById(trip._id).populate(
-      "carId",
-      "nameCar licensePlate seats"
-    );
+    // Populate carId và userId
+    const populatedTrip = await Trip.findById(trip._id)
+      .populate("carId", "nameCar licensePlate seats")
+      .populate("userId", "username email")
+      .lean();
 
     return res.status(201).json({
       errCode: 0,
@@ -98,6 +113,14 @@ const createTrip = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating trip:", error);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        errCode: 1,
+        message: `Validation error: ${Object.values(error.errors)
+          .map((e) => e.message)
+          .join(", ")}`,
+      });
+    }
     return res.status(500).json({
       errCode: 1,
       message: "Internal server error",
@@ -111,6 +134,8 @@ const getAllTrips = async (req, res) => {
     const {
       pickupPoint,
       dropOffPoint,
+      pickupProvince,
+      dropOffProvince,
       departureDate,
       page = 1,
       limit = 2,
@@ -137,6 +162,8 @@ const getAllTrips = async (req, res) => {
     const filter = {};
     if (pickupPoint) filter.pickupPoint = pickupPoint;
     if (dropOffPoint) filter.dropOffPoint = dropOffPoint;
+    if (pickupProvince) filter.pickupProvince = pickupProvince;
+    if (dropOffProvince) filter.dropOffProvince = dropOffProvince;
     if (departureDate) {
       const startOfDay = new Date(departureDate);
       startOfDay.setHours(0, 0, 0, 0);
@@ -156,6 +183,7 @@ const getAllTrips = async (req, res) => {
     // Phân trang
     const trips = await Trip.find(filter)
       .populate("carId", "nameCar licensePlate seats")
+      .populate("userId", "username phone address image description email")
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .sort({ departureDate: 1 })
@@ -193,10 +221,9 @@ const getTripById = async (req, res) => {
       });
     }
 
-    const trip = await Trip.findById(id).populate(
-      "carId",
-      "nameCar licensePlate seats"
-    );
+    const trip = await Trip.findById(id)
+      .populate("carId", "nameCar licensePlate seats")
+      .populate("userId", "username phone address image description email");
     if (!trip) {
       return res.status(404).json({
         errCode: 1,
