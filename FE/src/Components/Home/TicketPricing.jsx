@@ -24,7 +24,7 @@ const TicketPricing = () => {
                 <span className="text-orange-500 mr-2">✔</span>
                 Xe giường nằm chất lượng cao
               </li>
-              <li class nước="flex items-center">
+              <li className nước="flex items-center">
                 <span className="text-orange-500 mr-2">✔</span>
                 Khởi hành mỗi giờ
               </li>
@@ -71,7 +71,7 @@ const TicketPricing = () => {
                 <span className="text-orange-500 mr-2">✔</span>
                 Xe giường nằm chất lượng cao
               </li>
-              <li class nước="flex items-center">
+              <li className nước="flex items-center">
                 <span className="text-orange-500 mr-2">✔</span>
                 Khởi hành mỗi giờ
               </li>

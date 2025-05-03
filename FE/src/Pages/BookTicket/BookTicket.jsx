@@ -1,64 +1,124 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SeeDetail from "../../Components/Home/ListRoutertrip/SeeDetail";
 import { api } from "../../Util/axios";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { format, parse } from "date-fns";
 
-const fetchTrips = async (id) => {
-  console.log("check thong tin cua id kkk ", id);
+const fetchTrip = async (id) => {
   const token = localStorage.getItem("accessToken");
   if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
 
   const res = await api.get(`/trips/${id}`);
-  console.log("check res.data.data.trips", res.data);
-
   if (res.data.errCode !== 0)
-    throw new Error(res.data.message || "Không thể tải danh sách chuyến xe.");
+    throw new Error(res.data.message || "Không thể tải thông tin chuyến xe.");
 
-  return res.data.trip || [];
+  return res.data.trip || {};
 };
+
+const fetchUser = async (id) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
+
+  const res = await api.get(`/user/${id}`);
+  if (res.data.errCode !== 0)
+    throw new Error(res.data.message || "Không thể tải thông tin người dùng.");
+
+  return res.data.user || {};
+};
+
+// Hàm định dạng giờ sang AM/PM
+const formatTimeTo12Hour = (time) => {
+  if (!time) return "";
+  try {
+    const date = parse(time, "HH:mm", new Date());
+    return format(date, "h:mm a");
+  } catch {
+    return time;
+  }
+};
+
 const BookTicket = () => {
   const { id } = useParams();
 
+  // Lấy userId từ localStorage
+  let userId;
+  try {
+    userId = JSON.parse(localStorage.getItem("user")) || {};
+  } catch {
+    userId = {};
+  }
+
+  // Lấy dữ liệu chuyến xe
   const {
-    data: trips = [],
-    isLoading,
-    error,
+    data: trip = {},
+    isLoading: isTripLoading,
+    error: tripError,
   } = useQuery({
-    queryKey: ["trips", id],
-    queryFn: () => fetchTrips(id),
+    queryKey: ["trip", id],
+    queryFn: () => fetchTrip(id),
+    enabled: !!id,
   });
 
-  console.log("check thông tin trip cấu đặt vé", trips);
+  // Lấy dữ liệu người dùng từ API (tùy chọn)
+  const {
+    data: user = {},
+    isLoading: isUserLoading,
+    error: userError,
+  } = useQuery({
+    queryKey: ["user", userId?.id],
+    queryFn: () => fetchUser(userId.id),
+    enabled: !!userId?.id,
+  });
 
-  // Default trip data
+  // Map API response to tripData
   const tripData = {
-    title: trips.title || "Chuyến Hà Nội đi Ninh Bình",
-    operator: trips.operator || "Nhà xe Chí Thanh",
-    price: trips.price || 200000,
-    departureTime: trips.departureTime || "7:30PM",
-    arrivalTime: trips.arrivalTime || "9:30PM",
-    travelDate: trips.travelDate || "20/10/2025",
-    pickupPoint: trips.pickupPoint || "Bến xe Miền Đông",
-    dropOffPoint: trips.dropOffPoint || "Bến xe Miền Tây",
+    title:
+      trip.pickupProvince && trip.dropOffProvince
+        ? `${trip.pickupProvince} đi ${trip.dropOffProvince}`
+        : "Chuyến Hà Nội đi Ninh Bình",
+    operator: trip.operator || "Nhà xe Chí Thanh",
+    price: trip.ticketPrice || 200000,
+    departureTime: formatTimeTo12Hour(trip.departureTime),
+    arrivalTime: formatTimeTo12Hour(trip.arrivalTime),
+    travelDate: trip.departureDate
+      ? new Date(trip.departureDate).toLocaleDateString("vi-VN")
+      : "20/10/2025",
+    pickupPoint: trip.pickupPoint || "Bến xe Miền Đông",
+    dropOffPoint: trip.dropOffPoint || "Bến xe Miền Tây",
+    availableSeats:
+      trip.status === "Đã đầy" ? "0/22" : `${trip.seats || 22}/22`,
+    arrivalDate: trip.arrivalDate
+      ? new Date(trip.arrivalDate).toLocaleDateString("vi-VN")
+      : "20/10/2025",
   };
 
   // Form state
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
+    name: user.username || userId.username || "",
+    email: user.email || userId.email || "",
+    phone: user.phone || userId.phone || "",
+    address: user.address || userId.address || "",
     promoCode: "",
   });
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState(null);
 
+  // Cập nhật formData khi user thay đổi
+  useEffect(() => {
+    setFormData({
+      name: user.username || userId.username || "",
+      email: user.email || userId.email || "",
+      phone: user.phone || userId.phone || "",
+      address: user.address || userId.address || "",
+      promoCode: formData.promoCode,
+    });
+  }, [user, userId]);
+
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -98,22 +158,51 @@ const BookTicket = () => {
       return;
     }
 
-    // Log form data (replace with API call in production)
     console.log("Booking submitted:", {
       trip: tripData,
       user: formData,
     });
 
-    // Show success message
     setSubmitStatus("success");
-    // Reset form
-    setFormData({ name: "", email: "", phone: "", address: "", promoCode: "" });
-    // Clear success message after 3 seconds
+    setFormData((prev) => ({
+      ...prev,
+      promoCode: "",
+    }));
     setTimeout(() => setSubmitStatus(null), 3000);
   };
 
+  if (isTripLoading || isUserLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Đang tải thông tin...</div>
+      </div>
+    );
+  }
+
+  if (tripError || userError) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-xl text-red-600">
+          Lỗi:{" "}
+          {tripError?.message ||
+            userError?.message ||
+            "Không thể tải thông tin."}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-10 min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <style>
+        {`
+          input:disabled {
+            color: #1f2937; /* Màu xám đậm (gray-800) */
+            background-color: #f3f4f6; /* Màu nền xám nhạt (gray-100) */
+            opacity: 1; /* Đảm bảo không bị mờ */
+          }
+        `}
+      </style>
       <div className="max-w-7xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">
           Thông tin đặt vé
@@ -145,9 +234,11 @@ const BookTicket = () => {
                 </div>
                 <div className="flex items-center">
                   <span className="text-gray-600 font-medium w-32">
-                    Số ghế trống :
+                    Số ghế trống:
                   </span>
-                  <span className="text-gray-900">20/22</span>
+                  <span className="text-gray-900">
+                    {tripData.availableSeats}
+                  </span>
                 </div>
                 <div className="flex items-center">
                   <span className="text-gray-600 font-medium w-32">
@@ -168,12 +259,12 @@ const BookTicket = () => {
                     Ngày đi:
                   </span>
                   <span className="text-gray-900">{tripData.travelDate}</span>
-                </div>{" "}
+                </div>
                 <div className="flex items-center">
                   <span className="text-gray-600 font-medium w-32">
                     Ngày đến:
                   </span>
-                  <span className="text-gray-900">{tripData.travelDate}</span>
+                  <span className="text-gray-900">{tripData.arrivalDate}</span>
                 </div>
                 <div className="flex items-center">
                   <span className="text-gray-600 font-medium w-32">
@@ -214,6 +305,7 @@ const BookTicket = () => {
                         errors.name ? "border-red-500" : "border-gray-300"
                       } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
                       placeholder="Nhập họ và tên"
+                      disabled
                       aria-required="true"
                     />
                     {errors.name && (
@@ -238,6 +330,7 @@ const BookTicket = () => {
                         errors.email ? "border-red-500" : "border-gray-300"
                       } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
                       placeholder="Nhập email"
+                      disabled
                       aria-required="true"
                     />
                     {errors.email && (
@@ -264,6 +357,7 @@ const BookTicket = () => {
                         errors.phone ? "border-red-500" : "border-gray-300"
                       } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
                       placeholder="Nhập số điện thoại"
+                      disabled
                       aria-required="true"
                     />
                     {errors.phone && (
@@ -290,6 +384,7 @@ const BookTicket = () => {
                         errors.address ? "border-red-500" : "border-gray-300"
                       } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
                       placeholder="Nhập địa chỉ"
+                      disabled
                       aria-required="true"
                     />
                     {errors.address && (
@@ -363,7 +458,7 @@ const BookTicket = () => {
 
           {/* SeeDetail Section */}
           <div className="flex-[2]">
-            <SeeDetail trips={trips} />
+            <SeeDetail trips={trip} />
           </div>
         </div>
       </div>
