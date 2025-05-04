@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import SeeDetail from "../../Components/Home/ListRoutertrip/SeeDetail";
 import { api } from "../../Util/axios";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, parse } from "date-fns";
+import ModelAcceptTicket from "../../Components/Home/ModelAcceptTicket/ModelAcceptTicket";
 
 const fetchTrip = async (id) => {
   const token = localStorage.getItem("accessToken");
@@ -14,17 +15,6 @@ const fetchTrip = async (id) => {
     throw new Error(res.data.message || "Không thể tải thông tin chuyến xe.");
 
   return res.data.trip || {};
-};
-
-const fetchUser = async (id) => {
-  const token = localStorage.getItem("accessToken");
-  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
-
-  const res = await api.get(`/user/${id}`);
-  if (res.data.errCode !== 0)
-    throw new Error(res.data.message || "Không thể tải thông tin người dùng.");
-
-  return res.data.user || {};
 };
 
 // Hàm định dạng giờ sang AM/PM
@@ -38,9 +28,21 @@ const formatTimeTo12Hour = (time) => {
   }
 };
 
+const fetchPromotion = async (code) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
+
+  const res = await api.get(`/promotions?code=${code}`);
+  if (res.data.errCode !== 0)
+    throw new Error(res.data.message || "Không thể tải thông tin khuyến mãi.");
+
+  return res.data || {};
+};
+
 const BookTicket = () => {
   const { id } = useParams();
-
+  const [codeSale, setCodeSale] = useState("");
+  const [priceSale, setPriceSale] = useState(0);
   // Lấy userId từ localStorage
   let userId;
   try {
@@ -58,17 +60,6 @@ const BookTicket = () => {
     queryKey: ["trip", id],
     queryFn: () => fetchTrip(id),
     enabled: !!id,
-  });
-
-  // Lấy dữ liệu người dùng từ API (tùy chọn)
-  const {
-    data: user = {},
-    isLoading: isUserLoading,
-    error: userError,
-  } = useQuery({
-    queryKey: ["user", userId?.id],
-    queryFn: () => fetchUser(userId.id),
-    enabled: !!userId?.id,
   });
 
   // Map API response to tripData
@@ -94,84 +85,62 @@ const BookTicket = () => {
   };
 
   // Form state
-  const [formData, setFormData] = useState({
-    name: user.username || userId.username || "",
-    email: user.email || userId.email || "",
-    phone: user.phone || userId.phone || "",
-    address: user.address || userId.address || "",
-    promoCode: "",
-  });
+
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState(null);
-
-  // Cập nhật formData khi user thay đổi
-  useEffect(() => {
-    setFormData({
-      name: user.username || userId.username || "",
-      email: user.email || userId.email || "",
-      phone: user.phone || userId.phone || "",
-      address: user.address || userId.address || "",
-      promoCode: formData.promoCode,
-    });
-  }, [user, userId]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setCodeSale((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
-  // Validate form
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = "Tên là bắt buộc";
-    if (!formData.email.trim()) {
-      newErrors.email = "Email là bắt buộc";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Email không hợp lệ";
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      console.log(" check codeSale ", codeSale);
+
+      const res = await fetchPromotion(codeSale.codeSale);
+      console.log("check thong tin", res);
+      if (res.errCode === 0) {
+        if (res.data.promotions[0].discountType === "Percentage") {
+          // console.log(
+          //   " check res.data.promotions[0].discountType",
+          //   res.data.promotions[0].discountType
+          // );
+          setPriceSale(
+            tripData.price * (1 - res.data.promotions[0].discountValue / 100)
+          );
+        }
+        if (res.data.promotions[0].discountType === "Fixed") {
+          setPriceSale(tripData.price - res.data.promotions[0].discountValue);
+        }
+      }
+
+      setIsModalOpen(true); // Mở modal sau khi có dữ liệu
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin khuyến mãi:", error.message);
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Số điện thoại là bắt buộc";
-    } else if (!/^\d{10,11}$/.test(formData.phone)) {
-      newErrors.phone = "Số điện thoại phải có 10-11 chữ số";
-    }
-    if (!formData.address.trim()) newErrors.address = "Địa chỉ là bắt buộc";
-    if (
-      formData.promoCode.trim() &&
-      !/^[A-Za-z0-9]{6,12}$/.test(formData.promoCode)
-    ) {
-      newErrors.promoCode = "Mã khuyến mãi phải là 6-12 ký tự chữ hoặc số";
-    }
-    return newErrors;
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      setSubmitStatus("error");
-      return;
-    }
-
-    console.log("Booking submitted:", {
-      trip: tripData,
-      user: formData,
-    });
-
+  // Handle confirm booking
+  const handleConfirmBooking = () => {
     setSubmitStatus("success");
-    setFormData((prev) => ({
-      ...prev,
-      promoCode: "",
-    }));
+    setIsModalOpen(false);
     setTimeout(() => setSubmitStatus(null), 3000);
   };
 
-  if (isTripLoading || isUserLoading) {
+  // Handle cancel modal
+  const handleCancelModal = () => {
+    setIsModalOpen(false);
+  };
+
+  if (isTripLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-xl text-gray-600">Đang tải thông tin...</div>
@@ -179,14 +148,11 @@ const BookTicket = () => {
     );
   }
 
-  if (tripError || userError) {
+  if (tripError) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-xl text-red-600">
-          Lỗi:{" "}
-          {tripError?.message ||
-            userError?.message ||
-            "Không thể tải thông tin."}
+          Lỗi: {tripError?.message || "Không thể tải thông tin."}
         </div>
       </div>
     );
@@ -197,9 +163,9 @@ const BookTicket = () => {
       <style>
         {`
           input:disabled {
-            color: #1f2937; /* Màu xám đậm (gray-800) */
-            background-color: #f3f4f6; /* Màu nền xám nhạt (gray-100) */
-            opacity: 1; /* Đảm bảo không bị mờ */
+            color: #1f2937;
+            background-color: #f3f4f6;
+            opacity: 1;
           }
         `}
       </style>
@@ -299,11 +265,11 @@ const BookTicket = () => {
                       type="text"
                       id="name"
                       name="name"
-                      value={formData.name}
+                      value={userId.username}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.name ? "border-red-500" : "border-gray-300"
-                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
+                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm disabled:text-gray-800 disabled:bg-gray-100 disabled:opacity-100`}
                       placeholder="Nhập họ và tên"
                       disabled
                       aria-required="true"
@@ -324,11 +290,11 @@ const BookTicket = () => {
                       type="email"
                       id="email"
                       name="email"
-                      value={formData.email}
+                      value={userId.email}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.email ? "border-red-500" : "border-gray-300"
-                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
+                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm disabled:text-gray-800 disabled:bg-gray-100 disabled:opacity-100`}
                       placeholder="Nhập email"
                       disabled
                       aria-required="true"
@@ -351,11 +317,11 @@ const BookTicket = () => {
                       type="tel"
                       id="phone"
                       name="phone"
-                      value={formData.phone}
+                      value={userId.phone}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.phone ? "border-red-500" : "border-gray-300"
-                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
+                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm disabled:text-gray-800 disabled:bg-gray-100 disabled:opacity-100`}
                       placeholder="Nhập số điện thoại"
                       disabled
                       aria-required="true"
@@ -378,11 +344,11 @@ const BookTicket = () => {
                       type="text"
                       id="address"
                       name="address"
-                      value={formData.address}
+                      value={userId.address}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.address ? "border-red-500" : "border-gray-300"
-                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
+                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm disabled:text-gray-800 disabled:bg-gray-100 disabled:opacity-100`}
                       placeholder="Nhập địa chỉ"
                       disabled
                       aria-required="true"
@@ -411,9 +377,8 @@ const BookTicket = () => {
                     </label>
                     <input
                       type="text"
-                      id="promoCode"
-                      name="promoCode"
-                      value={formData.promoCode}
+                      id="codeSale"
+                      name="codeSale"
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.promoCode ? "border-red-500" : "border-gray-300"
@@ -462,6 +427,16 @@ const BookTicket = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <ModelAcceptTicket
+          tripData={tripData}
+          onCancel={handleCancelModal}
+          priceSale={priceSale}
+          onConfirm={handleConfirmBooking}
+        />
+      )}
     </div>
   );
 };
