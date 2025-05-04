@@ -14,7 +14,11 @@ const {
 const router = express.Router();
 
 // Chỉ có nhà xe mới được tạo xe
-router.post("/tickets", verifyTokenAndRoleAuth(["GARAGE"]), createTicket);
+router.post(
+  "/tickets",
+  verifyTokenAndRoleAuth(["GARAGE", "USER"]),
+  createTicket
+);
 
 // Route: Lấy thông tin một xe
 router.get("/tickets/:id", verifyToken, getTicketById);

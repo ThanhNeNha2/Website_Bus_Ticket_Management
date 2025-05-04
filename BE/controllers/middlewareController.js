@@ -18,7 +18,7 @@ let verifyToken = (req, res, next) => {
   }
 };
 
-const validRoles = ["ADMIN", "GARAGE"];
+const validRoles = ["ADMIN", "GARAGE", "USER"];
 
 const verifyTokenAndRoleAndID = (allowedRoles) => (req, res, next) => {
   verifyToken(req, res, () => {

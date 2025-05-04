@@ -133,6 +133,10 @@ const createTicket = async (req, res) => {
       .populate("carId", "nameCar licensePlate")
       .populate("userId", "username email");
 
+    console.log(" check thong tin tạo ra ticket  ", ticket);
+
+    console.log(" check thong tin tạo ra populatedTicket  ", populatedTicket);
+
     return res.status(201).json({
       errCode: 0,
       message: "Ticket created successfully",
