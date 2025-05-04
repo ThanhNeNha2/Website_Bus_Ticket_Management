@@ -198,6 +198,8 @@ const getAllPromotions = async (req, res) => {
     } = req.query;
     const user = req.user;
 
+    console.log(" check thong tin code ", code);
+
     // Kiểm tra thông tin user
     if (!user || !user.id || !user.role) {
       return res.status(403).json({
@@ -206,18 +208,56 @@ const getAllPromotions = async (req, res) => {
       });
     }
 
-    // Xây dựng bộ lọc
-    const filter = {};
-    if (code) filter.code = { $regex: code, $options: "i" };
-    if (status) filter.status = status;
-    if (startDate) filter.startDate = { $gte: new Date(startDate) };
-    if (endDate) filter.endDate = { $lte: new Date(endDate) };
-    if (user.role === "GARAGE") {
-      filter.garageId = user.id; // Chỉ lấy mã của nhà xe
+    // Kiểm tra quyền
+    if (!["GARAGE", "ADMIN"].includes(user.role)) {
+      return res.status(403).json({
+        errCode: 1,
+        message: "You do not have permission to view promotions",
+      });
     }
 
-    // Phân trang
+    // Xây dựng bộ lọc
+    const filter = {};
+    if (code) {
+      filter.code = code; // Tìm kiếm chính xác, sẽ dùng collation để phân biệt hoa thường
+    }
+    if (status) {
+      const validStatuses = ["Không kích hoạt", "Kích hoạt", "Hết hạn"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid status",
+        });
+      }
+      filter.status = status;
+    }
+    if (startDate) {
+      const start = new Date(startDate);
+      if (isNaN(start)) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid start date format",
+        });
+      }
+      filter.startDate = { $gte: start };
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      if (isNaN(end)) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid end date format",
+        });
+      }
+      filter.endDate = { $lte: end };
+    }
+    if (user.role === "GARAGE") {
+      filter.garageId = user.id;
+    }
+
+    // Phân trang với collation để phân biệt hoa thường
     const promotions = await Promotion.find(filter)
+      .collation({ locale: "en", strength: 2 }) // Phân biệt hoa thường
       .populate(
         "applicableTrips",
         "pickupPoint dropOffPoint departureTime dropOffProvince pickupProvince"
@@ -227,7 +267,18 @@ const getAllPromotions = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    const total = await Promotion.countDocuments(filter);
+    const total = await Promotion.countDocuments(filter).collation({
+      locale: "en",
+      strength: 2,
+    });
+
+    // Kiểm tra nếu không tìm thấy mã chính xác
+    if (code && promotions.length === 0) {
+      return res.status(404).json({
+        errCode: 1,
+        message: `Promotion code ${code} not found`,
+      });
+    }
 
     return res.status(200).json({
       errCode: 0,
