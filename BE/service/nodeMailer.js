@@ -3,7 +3,16 @@ const fs = require("fs");
 const handlebars = require("handlebars");
 const path = require("path");
 
-export const sendEmail = async (name, activationCode, toEmail) => {
+const sendEmail = async (
+  busCompanyName,
+  nameCustomer,
+  tripName,
+  ticketCode,
+  price,
+  travelDate,
+  departureTime,
+  toEmail
+) => {
   // Đọc template từ file
   const templateSource = fs.readFileSync(
     path.join(__dirname, "../public/bookTicket.hbs"),
@@ -15,8 +24,13 @@ export const sendEmail = async (name, activationCode, toEmail) => {
 
   // Dữ liệu động
   const replacements = {
-    name: name,
-    activationCode: activationCode,
+    busCompanyName: busCompanyName,
+    nameCustomer: nameCustomer,
+    tripName: tripName,
+    travelDate: travelDate,
+    price: price,
+    departureTime: departureTime,
+    ticketCode: ticketCode,
   };
 
   // Tạo HTML từ template và dữ liệu động
@@ -34,8 +48,12 @@ export const sendEmail = async (name, activationCode, toEmail) => {
   const info = await transporter.sendMail({
     from: "ta.coaching.v2@gmail.com", // sender address
     to: toEmail, // list of receivers
-    subject: "Hello ✔", // Subject line
-    text: "Hello world?", // plain text body
+    subject: "Thông báo đặt vé xe  ", // Subject line
+    text: "Thông báo đặt vé xe ", // plain text body
     html: emailHtml,
   });
+};
+
+module.exports = {
+  sendEmail,
 };

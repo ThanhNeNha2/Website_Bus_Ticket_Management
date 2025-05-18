@@ -151,12 +151,12 @@ const getAllTrips = async (req, res) => {
     }
 
     // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được truy cập
-    if (!["GARAGE", "ADMIN"].includes(user.role)) {
-      return res.status(403).json({
-        errCode: 1,
-        message: "You do not have permission to view trips",
-      });
-    }
+    // if (!["GARAGE", "ADMIN"].includes(user.role)) {
+    //   return res.status(403).json({
+    //     errCode: 1,
+    //     message: "You do not have permission to view trips",
+    //   });
+    // }
 
     // Xây dựng bộ lọc
     const filter = {};

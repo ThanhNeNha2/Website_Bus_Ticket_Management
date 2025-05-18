@@ -3,6 +3,7 @@ const Ticket = require("../models/Ticket");
 const Trip = require("../models/Trip");
 const Car = require("../models/Car");
 const { v4: uuidv4 } = require("uuid");
+const { sendEmail } = require("../service/nodeMailer");
 
 // Create a new ticket
 const createTicket = async (req, res) => {
@@ -129,13 +130,56 @@ const createTicket = async (req, res) => {
 
     // Populate dữ liệu
     const populatedTicket = await Ticket.findById(ticket._id)
-      .populate("tripId", "pickupPoint dropOffPoint departureTime arrivalTime")
+      .populate({
+        path: "tripId",
+        select:
+          "pickupPoint dropOffPoint departureTime arrivalDate pickupProvince dropOffProvince",
+        populate: {
+          path: "userId",
+          select: "username email",
+        },
+      })
       .populate("carId", "nameCar licensePlate")
       .populate("userId", "username email");
 
-    console.log(" check thong tin tạo ra ticket  ", ticket);
+    // console.log(" check thong tin tạo ra ticket  ", ticket);
+    // console.log(" check thong tin tạo ra populatedTicket  ", populatedTicket);
+    console.log(
+      " check thong tin populatedTicket.tripId   ",
+      populatedTicket.tripId.userId
+    );
+    console.log(
+      " check thong tin  nguoi mua ve  ",
+      populatedTicket.userId.username
+    );
+    console.log(
+      " check thong tin chuyen xe   ",
+      populatedTicket.tripId.pickupProvince,
+      " và đến ",
+      populatedTicket.tripId.dropOffProvince
+    );
+    console.log(" check thong tin  ma ve    ", populatedTicket.ticketCode);
+    console.log(" check thong tin gia    ", populatedTicket.ticketPrice);
+    console.log(
+      " check thong tin ngay gio    ",
+      populatedTicket.tripId.departureTime
+    );
+    console.log(
+      " check thong tin gmail nguoi mua     ",
+      populatedTicket.userId.email
+    );
+    const tripName = `${populatedTicket.tripId.pickupProvince} và đến ${populatedTicket.tripId.dropOffProvince}`;
 
-    console.log(" check thong tin tạo ra populatedTicket  ", populatedTicket);
+    await sendEmail(
+      populatedTicket.tripId.userId.username,
+      populatedTicket.userId.username,
+      tripName,
+      populatedTicket.ticketCode,
+      populatedTicket.ticketPrice,
+      populatedTicket.tripId.arrivalDate,
+      populatedTicket.tripId.departureTime,
+      populatedTicket.userId.email
+    );
 
     return res.status(201).json({
       errCode: 0,

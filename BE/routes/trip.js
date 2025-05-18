@@ -24,7 +24,7 @@ router.get("/trips/:id", verifyToken, getTripById);
 router.get("/trips", verifyToken, getAllTrips);
 router.get(
   "/tripsNoPage",
-  verifyTokenAndRoleAuth(["GARAGE"]),
+  // verifyTokenAndRoleAuth(["GARAGE"]),
   getAllTripNoPage
 );
 
