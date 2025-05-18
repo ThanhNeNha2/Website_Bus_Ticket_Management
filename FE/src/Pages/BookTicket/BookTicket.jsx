@@ -85,7 +85,6 @@ const BookTicket = () => {
   };
 
   // Form state
-
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -93,7 +92,7 @@ const BookTicket = () => {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCodeSale((prev) => ({ ...prev, [name]: value }));
+    setCodeSale(value); // Simplified to directly set codeSale as a string
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -103,28 +102,33 @@ const BookTicket = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      console.log(" check codeSale ", codeSale);
-
-      const res = await fetchPromotion(codeSale.codeSale);
-      console.log("check thong tin", res);
-      if (res.errCode === 0) {
-        if (res.data.promotions[0].discountType === "Percentage") {
-          // console.log(
-          //   " check res.data.promotions[0].discountType",
-          //   res.data.promotions[0].discountType
-          // );
-          setPriceSale(
-            tripData.price * (1 - res.data.promotions[0].discountValue / 100)
-          );
-        }
-        if (res.data.promotions[0].discountType === "Fixed") {
-          setPriceSale(tripData.price - res.data.promotions[0].discountValue);
-        }
+      if (!codeSale.trim()) {
+        // No promo code provided, use original price
+        setPriceSale(tripData.price);
+        setIsModalOpen(true); // Open modal directly
+        return;
       }
 
-      setIsModalOpen(true); // Mở modal sau khi có dữ liệu
+      // Fetch promotion if code is provided
+      const res = await fetchPromotion(codeSale);
+      if (res.errCode !== 0) {
+        throw new Error(res.message || "Mã khuyến mãi không hợp lệ.");
+      }
+      if (res.data.promotions[0].discountType === "Percentage") {
+        setPriceSale(
+          tripData.price * (1 - res.data.promotions[0].discountValue / 100)
+        );
+      } else if (res.data.promotions[0].discountType === "Fixed") {
+        setPriceSale(tripData.price - res.data.promotions[0].discountValue);
+      }
+
+      setIsModalOpen(true); // Open modal after processing promo code
     } catch (error) {
       console.error("Lỗi khi lấy thông tin khuyến mãi:", error.message);
+      setErrors((prev) => ({
+        ...prev,
+        promoCode: "Mã code sai hoặc không tồn tại ",
+      }));
     }
   };
 
@@ -370,7 +374,7 @@ const BookTicket = () => {
                 <div className="space-y-4">
                   <div>
                     <label
-                      htmlFor="promoCode"
+                      htmlFor="codeSale"
                       className="block text-sm font-medium text-gray-700"
                     >
                       Mã code
@@ -379,6 +383,7 @@ const BookTicket = () => {
                       type="text"
                       id="codeSale"
                       name="codeSale"
+                      value={codeSale}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.promoCode ? "border-red-500" : "border-gray-300"
