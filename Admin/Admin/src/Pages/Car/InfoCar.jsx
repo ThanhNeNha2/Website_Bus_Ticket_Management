@@ -299,9 +299,9 @@ const InfoCar = () => {
                   </td>
                   <td className="py-2 px-4 border-b">{car.seats}</td>
                   <td className="py-2 px-4 border-b">
-                    <div className="font-medium">{car.userId.username}</div>
+                    <div className="font-medium">{car?.userId?.username}</div>
                     <div className="text-sm text-gray-600">
-                      {car.userId.email}
+                      {car?.userId?.email}
                     </div>
                   </td>
                   <td className="py-2 px-4 border-b">

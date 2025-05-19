@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../Util/axios";
-import { format } from "date-fns"; // Import parse for converting string to Date
-import DatePicker from "react-datepicker"; // Import react-datepicker
+import { format } from "date-fns";
+import DatePicker from "react-datepicker";
 
 const UpdateInfoTrip = ({
   formData,
@@ -11,19 +11,24 @@ const UpdateInfoTrip = ({
   resetForm,
   loading,
   setFormData,
+  error, // Thêm prop error
 }) => {
   const [cars, setCars] = useState([]);
   const [seatError, setSeatError] = useState("");
+  const [availableSeatsError, setAvailableSeatsError] = useState("");
   const [dateError, setDateError] = useState("");
+  const [priceError, setPriceError] = useState("");
   const [isLoadingCars, setIsLoadingCars] = useState(false);
+  const [carsError, setCarsError] = useState("");
 
   useEffect(() => {
     const fetchCars = async () => {
       setIsLoadingCars(true);
       try {
         const res = await api.get("/carsnopage");
-        setCars(res.data.data.cars);
+        setCars(res.data.data.cars || []);
       } catch (error) {
+        setCarsError("Không thể tải danh sách xe. Vui lòng thử lại.");
         console.error("Failed to fetch cars:", error);
       } finally {
         setIsLoadingCars(false);
@@ -33,6 +38,7 @@ const UpdateInfoTrip = ({
     fetchCars();
   }, []);
 
+  // Validate totalSeats vs car seats
   useEffect(() => {
     if (formData.carId && formData.totalSeats) {
       const selectedCar = cars.find((car) => car._id === formData.carId);
@@ -52,23 +58,69 @@ const UpdateInfoTrip = ({
     }
   }, [formData.carId, formData.totalSeats, cars]);
 
+  // Validate seatsAvailable <= totalSeats
   useEffect(() => {
-    if (formData.departureDate && formData.arrivalDate) {
-      const departure = new Date(formData.departureDate);
-      const arrival = new Date(formData.arrivalDate);
-      if (arrival < departure) {
-        setDateError("Ngày đến phải sau ngày khởi hành.");
+    if (formData.totalSeats && formData.seatsAvailable) {
+      const totalSeats = parseInt(formData.totalSeats);
+      const seatsAvailable = parseInt(formData.seatsAvailable);
+      if (seatsAvailable > totalSeats) {
+        setAvailableSeatsError(
+          `Số ghế trống (${seatsAvailable}) không được vượt quá tổng số ghế (${totalSeats}).`
+        );
+      } else {
+        setAvailableSeatsError("");
+      }
+    } else {
+      setAvailableSeatsError("");
+    }
+  }, [formData.totalSeats, formData.seatsAvailable]);
+
+  // Validate ticketPrice > 0
+  useEffect(() => {
+    if (formData.ticketPrice) {
+      const price = parseFloat(formData.ticketPrice);
+      if (price <= 0) {
+        setPriceError("Giá vé phải lớn hơn 0.");
+      } else {
+        setPriceError("");
+      }
+    } else {
+      setPriceError("");
+    }
+  }, [formData.ticketPrice]);
+
+  // Validate departureDateTime vs arrivalDateTime
+  useEffect(() => {
+    if (
+      formData.departureDate &&
+      formData.departureTime &&
+      formData.arrivalDate &&
+      formData.arrivalTime
+    ) {
+      const departureDateTime = new Date(
+        `${formData.departureDate}T${formData.departureTime}:00`
+      );
+      const arrivalDateTime = new Date(
+        `${formData.arrivalDate}T${formData.arrivalTime}:00`
+      );
+      if (arrivalDateTime <= departureDateTime) {
+        setDateError("Ngày và giờ đến phải sau ngày và giờ khởi hành.");
       } else {
         setDateError("");
       }
     } else {
       setDateError("");
     }
-  }, [formData.departureDate, formData.arrivalDate]);
+  }, [
+    formData.departureDate,
+    formData.departureTime,
+    formData.arrivalDate,
+    formData.arrivalTime,
+  ]);
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (seatError || dateError) return;
+    if (seatError || availableSeatsError || dateError || priceError) return;
     handleEditTrip(e);
   };
 
@@ -87,7 +139,6 @@ const UpdateInfoTrip = ({
   // Handle date change for DatePicker
   const handleDateChange = (date, name) => {
     if (date) {
-      // Store the date in YYYY-MM-DD format in formData
       const formattedDate = format(date, "yyyy-MM-dd");
       setFormData({ ...formData, [name]: formattedDate });
     } else {
@@ -225,11 +276,12 @@ const UpdateInfoTrip = ({
                     : null
                 }
                 onChange={(date) => handleDateChange(date, "departureDate")}
-                dateFormat="MM/dd/yyyy" // Display format in the input
+                dateFormat="MM/dd/yyyy"
                 placeholderText="MM/DD/YYYY"
                 className={`w-full border px-3 py-2 rounded ${
                   dateError ? "mb-2" : ""
-                } `}
+                }`}
+                minDate={new Date()} // Không cho chọn ngày trong quá khứ
                 required
               />
               {dateError && (
@@ -262,9 +314,14 @@ const UpdateInfoTrip = ({
                   formData.arrivalDate ? new Date(formData.arrivalDate) : null
                 }
                 onChange={(date) => handleDateChange(date, "arrivalDate")}
-                dateFormat="MM/dd/yyyy" // Display format in the input
+                dateFormat="MM/dd/yyyy"
                 placeholderText="MM/DD/YYYY"
                 className="w-full border px-3 py-2 rounded"
+                minDate={
+                  formData.departureDate
+                    ? new Date(formData.departureDate)
+                    : new Date()
+                } // Không cho chọn trước departureDate
                 required
               />
             </div>
@@ -315,7 +372,12 @@ const UpdateInfoTrip = ({
                 className="w-full border px-3 py-2 rounded"
                 required
               />
-            </div>{" "}
+              {availableSeatsError && (
+                <p className="text-red-500 text-sm mt-1">
+                  {availableSeatsError}
+                </p>
+              )}
+            </div>
             <div className="mb-4 flex-1">
               <label className="block text-sm font-medium mb-1">Giá vé</label>
               <input
@@ -327,6 +389,9 @@ const UpdateInfoTrip = ({
                 className="w-full border px-3 py-2 rounded"
                 required
               />
+              {priceError && (
+                <p className="text-red-500 text-sm mt-1">{priceError}</p>
+              )}
             </div>
           </div>
 
@@ -348,8 +413,8 @@ const UpdateInfoTrip = ({
                 <option value="Đã đến">Đã đến</option>
                 <option value="Đã hủy">Đã hủy</option>
               </select>
-            </div>{" "}
-            <div className="mb-4">
+            </div>
+            <div className="mb-4 flex-1">
               <label className="block text-sm font-medium mb-1">Chọn xe</label>
               <select
                 name="carId"
@@ -368,9 +433,13 @@ const UpdateInfoTrip = ({
                   </option>
                 ))}
               </select>
+              {carsError && (
+                <p className="text-red-500 text-sm mt-1">{carsError}</p>
+              )}
             </div>
           </div>
 
+          {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
           <div className="flex justify-end">
             <button
               type="button"
@@ -382,7 +451,13 @@ const UpdateInfoTrip = ({
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              disabled={loading || seatError || dateError}
+              disabled={
+                loading ||
+                seatError ||
+                availableSeatsError ||
+                dateError ||
+                priceError
+              }
             >
               {loading ? "Đang xử lý..." : "Lưu"}
             </button>
