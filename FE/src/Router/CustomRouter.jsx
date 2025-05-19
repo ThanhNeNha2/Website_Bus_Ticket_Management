@@ -5,39 +5,28 @@ import MainLayout from "../Layouts/MainLayout";
 import Introduce from "../Pages/Introduce/Introduce";
 import ListRoutertrip from "../Pages/ListRoutertrip/ListRoutertrip";
 import News from "../Pages/News/News";
-import GarageLayout from "../Layouts/AdminLayout";
-import InfoTicket from "../Components/Admin/InfoTicket";
 import Register from "../Pages/Register/Register";
 import ClientLayout from "../Layouts/ClientLayout";
 import InfoUser from "../Components/InfoUser";
-import InfoTrip from "../Components/Admin/InfoTrip";
-import InfoCar from "../Components/Admin/InfoCar";
-import InfoPromotion from "../Components/Admin/InfoPromotion";
 import BookTicket from "../Pages/BookTicket/BookTicket";
 
 // Component ProtectedRoute để kiểm tra token và vai trò
 const ProtectedRoute = ({ children, allowedRoles, requireAuth = true }) => {
   const token = localStorage.getItem("accessToken");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-  // Nếu yêu cầu xác thực nhưng không có token, chuyển hướng đến login
+  // Kiểm tra token hợp lệ (giả định có API verify)
   if (requireAuth && !token) {
     return <Navigate to="/login" replace />;
   }
-
-  // Nếu có allowedRoles và vai trò không khớp, chuyển hướng đến trang chính
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // Kiểm tra vai trò
+  const hasRole = user?.role ? allowedRoles?.includes(user.role) : false;
+  if (requireAuth && allowedRoles && !hasRole) {
     return <Navigate to="/" replace />;
   }
-
   return children;
 };
 
 const CustomRouter = () => {
-  const token = localStorage.getItem("accessToken");
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const role = user?.role;
-
   return (
     <Routes>
       {/* MainLayout public routes */}
@@ -48,7 +37,7 @@ const CustomRouter = () => {
         <Route
           path="/introduce"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["USER"]}>
               <Introduce />
             </ProtectedRoute>
           }
@@ -56,7 +45,7 @@ const CustomRouter = () => {
         <Route
           path="/ListRoutertrip"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["USER"]}>
               <ListRoutertrip />
             </ProtectedRoute>
           }
@@ -64,7 +53,7 @@ const CustomRouter = () => {
         <Route
           path="/news"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["USER"]}>
               <News />
             </ProtectedRoute>
           }
@@ -72,50 +61,32 @@ const CustomRouter = () => {
         <Route
           path="/bookticket/:id"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["USER"]}>
               <BookTicket />
             </ProtectedRoute>
           }
         />
       </Route>
 
-      {/* GarageLayout routes */}
-      {role === "GARAGE" && (
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={["GARAGE"]}>
-              <GarageLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/ticket-management" element={<InfoTicket />} />
-          <Route path="/trip-management" element={<InfoTrip />} />
-          <Route path="/user-management" element={<InfoUser />} />
-          <Route path="/vehicle-management" element={<InfoCar />} />
-          <Route path="/promotion-management" element={<InfoPromotion />} />
-
-          <Route path="/info" element={<InfoUser />} />
-        </Route>
-      )}
-
-      {/* ClientLayout routes */}
-      {role === "USER" && (
-        <Route
-          element={
-            <ProtectedRoute allowedRoles={["USER"]}>
-              <ClientLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/info" element={<InfoUser />} />
-        </Route>
-      )}
+      {/* ClientLayout routes for USER */}
+      <Route
+        element={
+          <ProtectedRoute allowedRoles={["USER"]}>
+            <ClientLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/info" element={<InfoUser />} />
+      </Route>
 
       {/* 404 fallback */}
       <Route
         path="*"
         element={
-          token ? <Navigate to="/" replace /> : <Navigate to="/login" replace />
+          <Navigate
+            to={localStorage.getItem("accessToken") ? "/" : "/login"}
+            replace
+          />
         }
       />
     </Routes>

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import SeeDetail from "../../Components/Home/ListRoutertrip/SeeDetail";
+import { useNavigate, useParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../Util/axios";
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { format, parse } from "date-fns";
+import SeeDetail from "../../Components/Home/ListRoutertrip/SeeDetail";
 import ModelAcceptTicket from "../../Components/Home/ModelAcceptTicket/ModelAcceptTicket";
 
 const fetchTrip = async (id) => {
@@ -17,17 +17,6 @@ const fetchTrip = async (id) => {
   return res.data.trip || {};
 };
 
-// Hàm định dạng giờ sang AM/PM
-const formatTimeTo12Hour = (time) => {
-  if (!time) return "";
-  try {
-    const date = parse(time, "HH:mm", new Date());
-    return format(date, "h:mm a");
-  } catch {
-    return time;
-  }
-};
-
 const fetchPromotion = async (code) => {
   const token = localStorage.getItem("accessToken");
   if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
@@ -39,19 +28,42 @@ const fetchPromotion = async (code) => {
   return res.data || {};
 };
 
+const createTicket = async (ticketData) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
+
+  const res = await api.post("/tickets", ticketData);
+  if (res.data.errCode !== 0)
+    throw new Error(res.data.message || "Không thể đặt vé.");
+
+  return res.data.ticket || {};
+};
+
+// Hàm định dạng giờ sang AM/PM
+const formatTimeTo12Hour = (time) => {
+  if (!time) return "";
+  try {
+    const date = parse(time, "HH:mm", new Date());
+    return format(date, "h:mm a");
+  } catch {
+    return time;
+  }
+};
+
 const BookTicket = () => {
   const { id } = useParams();
-  const [codeSale, setCodeSale] = useState("");
-  const [priceSale, setPriceSale] = useState(0);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   // Lấy userId từ localStorage
   let userId;
   try {
-    userId = JSON.parse(localStorage.getItem("user")) || {};
+    userId = JSON.parse(localStorage.getItem("user") || "{}");
   } catch {
     userId = {};
   }
 
-  // Lấy dữ liệu chuyến xe
+  // Gọi useQuery và useMutation ở cấp độ top-level
   const {
     data: trip = {},
     isLoading: isTripLoading,
@@ -61,6 +73,39 @@ const BookTicket = () => {
     queryFn: () => fetchTrip(id),
     enabled: !!id,
   });
+
+  const bookTicketMutation = useMutation({
+    mutationFn: createTicket,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["trips"]);
+      setSubmitStatus("success");
+      setTimeout(() => {
+        navigate("/ticket-history");
+      }, 3000);
+    },
+    onError: (error) => {
+      setErrors((prev) => ({
+        ...prev,
+        booking: error.message || "Đặt vé thất bại. Vui lòng thử lại.",
+      }));
+      setSubmitStatus("error");
+    },
+  });
+
+  const [codeSale, setCodeSale] = useState("");
+  const [numberOfTickets, setNumberOfTickets] = useState(1);
+  const [priceSale, setPriceSale] = useState(0);
+  const [errors, setErrors] = useState({});
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Kiểm tra quyền truy cập sau khi gọi Hook
+  const isAuthorized =
+    localStorage.getItem("accessToken") && userId.role === "USER";
+  if (!isAuthorized) {
+    navigate("/login", { state: { from: window.location.pathname } });
+    return null;
+  }
 
   // Map API response to tripData
   const tripData = {
@@ -77,66 +122,109 @@ const BookTicket = () => {
       : "20/10/2025",
     pickupPoint: trip.pickupPoint || "Bến xe Miền Đông",
     dropOffPoint: trip.dropOffPoint || "Bến xe Miền Tây",
-    availableSeats:
-      trip.status === "Đã đầy" ? "0/22" : `${trip.seats || 22}/22`,
+    availableSeats: trip.seatsAvailable || 0,
+    totalSeats: trip.totalSeats || 22,
     arrivalDate: trip.arrivalDate
       ? new Date(trip.arrivalDate).toLocaleDateString("vi-VN")
       : "20/10/2025",
   };
 
-  // Form state
-  const [errors, setErrors] = useState({});
-  const [submitStatus, setSubmitStatus] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Validate trước khi đặt vé
+  const validateBooking = () => {
+    const newErrors = {};
+    const today = new Date("2025-05-19"); // Hôm nay là 19/05/2025
+    const departureDate = new Date(trip.departureDate);
+
+    if (departureDate < today) {
+      newErrors.departureDate = "Chuyến xe đã khởi hành. Không thể đặt vé.";
+    }
+
+    if (trip.seatsAvailable < numberOfTickets) {
+      newErrors.seats = "Không đủ ghế trống để đặt vé.";
+    }
+
+    if (numberOfTickets <= 0) {
+      newErrors.numberOfTickets = "Số lượng vé phải lớn hơn 0.";
+    }
+
+    if (codeSale && codeSale.length < 3) {
+      newErrors.promoCode = "Mã khuyến mãi phải có ít nhất 3 ký tự.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setCodeSale(value); // Simplified to directly set codeSale as a string
+    setCodeSale(value);
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  // Handle number of tickets change
+  const handleNumberOfTicketsChange = (e) => {
+    const value = parseInt(e.target.value) || 1;
+    setNumberOfTickets(value);
+    if (errors.numberOfTickets) {
+      setErrors((prev) => ({ ...prev, numberOfTickets: "" }));
     }
   };
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateBooking()) return;
+
     try {
-      if (!codeSale.trim()) {
-        // No promo code provided, use original price
-        setPriceSale(tripData.price);
-        setIsModalOpen(true); // Open modal directly
-        return;
+      let finalPrice = tripData.price * numberOfTickets;
+
+      if (codeSale.trim()) {
+        const res = await fetchPromotion(codeSale);
+        if (res.errCode !== 0) {
+          throw new Error(res.message || "Mã khuyến mãi không hợp lệ.");
+        }
+        if (res.data.promotions[0].discountType === "Percentage") {
+          finalPrice *= 1 - res.data.promotions[0].discountValue / 100;
+          setErrors((prev) => ({
+            ...prev,
+            promoCode: "Áp mã giảm giá thành công.",
+          }));
+        } else if (res.data.promotions[0].discountType === "Fixed") {
+          finalPrice -= res.data.promotions[0].discountValue;
+          setErrors((prev) => ({
+            ...prev,
+            promoCode: "Áp mã giảm giá thành công.",
+          }));
+        }
       }
 
-      // Fetch promotion if code is provided
-      const res = await fetchPromotion(codeSale);
-      if (res.errCode !== 0) {
-        throw new Error(res.message || "Mã khuyến mãi không hợp lệ.");
-      }
-      if (res.data.promotions[0].discountType === "Percentage") {
-        setPriceSale(
-          tripData.price * (1 - res.data.promotions[0].discountValue / 100)
-        );
-      } else if (res.data.promotions[0].discountType === "Fixed") {
-        setPriceSale(tripData.price - res.data.promotions[0].discountValue);
-      }
-
-      setIsModalOpen(true); // Open modal after processing promo code
+      setPriceSale(finalPrice);
+      setIsModalOpen(true); // Mở modal xác nhận
     } catch (error) {
       console.error("Lỗi khi lấy thông tin khuyến mãi:", error.message);
       setErrors((prev) => ({
         ...prev,
-        promoCode: "Mã code sai hoặc không tồn tại ",
+        promoCode: "Mã code sai hoặc không tồn tại.",
       }));
     }
   };
 
   // Handle confirm booking
   const handleConfirmBooking = () => {
-    setSubmitStatus("success");
+    const ticketData = {
+      tripId: id,
+      userId: userId._id,
+      numberOfTickets,
+      totalPrice: priceSale,
+      promoCode: codeSale || null,
+      status: "Đã đặt",
+    };
+
+    bookTicketMutation.mutate(ticketData);
     setIsModalOpen(false);
-    setTimeout(() => setSubmitStatus(null), 3000);
   };
 
   // Handle cancel modal
@@ -174,9 +262,17 @@ const BookTicket = () => {
         `}
       </style>
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">
-          Thông tin đặt vé
-        </h2>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-800 text-center">
+            Thông tin đặt vé
+          </h2>
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+          >
+            Quay lại
+          </button>
+        </div>
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Trip Details and Form Section */}
           <div className="flex-[4] space-y-6">
@@ -207,7 +303,7 @@ const BookTicket = () => {
                     Số ghế trống:
                   </span>
                   <span className="text-gray-900">
-                    {tripData.availableSeats}
+                    {tripData.availableSeats}/{tripData.totalSeats}
                   </span>
                 </div>
                 <div className="flex items-center">
@@ -269,7 +365,7 @@ const BookTicket = () => {
                       type="text"
                       id="name"
                       name="name"
-                      value={userId.username}
+                      value={userId.username || "Chưa có thông tin"}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.name ? "border-red-500" : "border-gray-300"
@@ -294,7 +390,7 @@ const BookTicket = () => {
                       type="email"
                       id="email"
                       name="email"
-                      value={userId.email}
+                      value={userId.email || "Chưa có thông tin"}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.email ? "border-red-500" : "border-gray-300"
@@ -321,7 +417,7 @@ const BookTicket = () => {
                       type="tel"
                       id="phone"
                       name="phone"
-                      value={userId.phone}
+                      value={userId.phone || "Chưa có thông tin"}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.phone ? "border-red-500" : "border-gray-300"
@@ -348,7 +444,7 @@ const BookTicket = () => {
                       type="text"
                       id="address"
                       name="address"
-                      value={userId.address}
+                      value={userId.address || "Chưa có thông tin"}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.address ? "border-red-500" : "border-gray-300"
@@ -360,6 +456,35 @@ const BookTicket = () => {
                     {errors.address && (
                       <p className="mt-1 text-sm text-red-600">
                         {errors.address}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="numberOfTickets"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Số lượng vé
+                    </label>
+                    <input
+                      type="number"
+                      id="numberOfTickets"
+                      name="numberOfTickets"
+                      value={numberOfTickets}
+                      onChange={handleNumberOfTicketsChange}
+                      min="1"
+                      max={trip.seatsAvailable}
+                      className={`mt-1 block w-full px-3 py-2 border ${
+                        errors.numberOfTickets
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm`}
+                      required
+                    />
+                    {errors.numberOfTickets && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.numberOfTickets}
                       </p>
                     )}
                   </div>
@@ -396,7 +521,11 @@ const BookTicket = () => {
                     {errors.promoCode && (
                       <p
                         id="promoCode-error"
-                        className="mt-1 text-sm text-red-600"
+                        className={`mt-1 text-sm ${
+                          errors.promoCode.includes("thành công")
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
                       >
                         {errors.promoCode}
                       </p>
@@ -406,21 +535,30 @@ const BookTicket = () => {
                     <button
                       type="submit"
                       className="py-2 px-6 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition font-medium focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                      disabled={bookTicketMutation.isLoading}
                     >
-                      Đặt vé
+                      {bookTicketMutation.isLoading
+                        ? "Đang xử lý..."
+                        : "Đặt vé"}
                     </button>
                   </div>
                 </div>
               </div>
 
-              {submitStatus === "success" && (
-                <p className="mt-4 text-sm text-green-600">
-                  Đặt vé thành công! Vui lòng kiểm tra email để xác nhận.
+              {errors.departureDate && (
+                <p className="mt-4 text-sm text-red-600">
+                  {errors.departureDate}
                 </p>
               )}
-              {submitStatus === "error" && (
-                <p className="mt-4 text-sm text-red-600">
-                  Vui lòng kiểm tra lại thông tin.
+              {errors.seats && (
+                <p className="mt-4 text-sm text-red-600">{errors.seats}</p>
+              )}
+              {errors.booking && (
+                <p className="mt-4 text-sm text-red-600">{errors.booking}</p>
+              )}
+              {submitStatus === "success" && (
+                <p className="mt-4 text-sm text-green-600">
+                  Đặt vé thành công! Đang chuyển hướng đến lịch sử đặt vé...
                 </p>
               )}
             </form>
@@ -439,6 +577,7 @@ const BookTicket = () => {
           tripData={tripData}
           onCancel={handleCancelModal}
           priceSale={priceSale}
+          numberOfTickets={numberOfTickets}
           onConfirm={handleConfirmBooking}
         />
       )}

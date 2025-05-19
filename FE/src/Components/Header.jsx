@@ -86,7 +86,7 @@ const Header = () => {
                       className="block px-4 py-2 hover:bg-gray-700 hover:text-gray-300"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      Thông tin tài khoản
+                      Thông tin cá nhân
                     </Link>
                   </li>
                   <li>

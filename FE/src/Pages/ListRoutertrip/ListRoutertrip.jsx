@@ -1,5 +1,4 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import SeeDetail from "../../Components/Home/ListRoutertrip/SeeDetail";
 import { api } from "../../Util/axios";
 import { useQuery } from "@tanstack/react-query";
@@ -18,6 +17,7 @@ const fetchTrips = async ({ page = 1, limit = 5, searchParams = {} }) => {
     queryParams.dropOffProvince = searchParams.dropOffProvince;
   if (searchParams.departureDate)
     queryParams.departureDate = searchParams.departureDate;
+  if (searchParams.carType) queryParams.carType = searchParams.carType;
 
   const query = new URLSearchParams(queryParams).toString();
 
@@ -35,12 +35,12 @@ const ListRoutertrip = () => {
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
   const [date, setDate] = useState("");
+  const [carType, setCarType] = useState(""); // Thêm state cho carType
   // State for active search filters
   const [searchParams, setSearchParams] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
   const [infoTripDetail, setInfoTripDetail] = useState({});
-  console.log(" check thong tinsau khi ân ", infoTripDetail);
 
   const {
     data: { trips = [], totalItems = 1 } = {},
@@ -54,11 +54,12 @@ const ListRoutertrip = () => {
 
   // Handle search to apply filters
   const handleSearch = () => {
-    console.log("Tìm vé:", { departure, destination, date });
+    console.log("Tìm vé:", { departure, destination, date, carType });
     setSearchParams({
       pickupProvince: departure,
       dropOffProvince: destination,
       departureDate: date,
+      carType: carType || undefined, // Chỉ thêm carType nếu có giá trị
     });
     setCurrentPage(1); // Reset to first page on new search
   };
@@ -68,6 +69,7 @@ const ListRoutertrip = () => {
     setDeparture("");
     setDestination("");
     setDate("");
+    setCarType(""); // Reset carType
     setSearchParams({});
     setCurrentPage(1);
   };
@@ -78,6 +80,7 @@ const ListRoutertrip = () => {
     const newPage = event.selected + 1;
     setCurrentPage(newPage);
   };
+
   const provinces = [
     "Hà Nội",
     "Đà Nẵng",
@@ -105,6 +108,9 @@ const ListRoutertrip = () => {
     "Quảng Nam",
     "Hậu Giang",
   ];
+
+  const carTypes = ["SIT", "BED"];
+
   return (
     <div className="bg-black text-white py-12 mt-14">
       <div className="container mx-auto">
@@ -155,6 +161,23 @@ const ListRoutertrip = () => {
             disabled={isLoading}
           />
 
+          {/* Thêm dropdown cho carType */}
+          <select
+            value={carType}
+            onChange={(e) => setCarType(e.target.value)}
+            className="py-[6px] px-3 border border-gray-300 rounded-md text-black focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            disabled={isLoading}
+          >
+            <option value="" disabled>
+              Loại xe
+            </option>
+            {carTypes.map((type) => (
+              <option key={type} value={type}>
+                {type === "SIT" ? "Xe ghế ngồi" : "Xe giường nằm"}
+              </option>
+            ))}
+          </select>
+
           <button
             onClick={handleSearch}
             className="py-2 px-5 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition font-medium"
@@ -195,7 +218,7 @@ const ListRoutertrip = () => {
                   key={trip._id}
                   className="relative rounded-xl overflow-hidden group shadow-lg h-[230px]"
                 >
-                  {/* Hình ảnh (use a placeholder or API-provided image if available) */}
+                  {/* Hình ảnh */}
                   <img
                     src="https://i.pinimg.com/736x/ba/c0/cf/bac0cfc9e389668b93f60a046096e4a4.jpg"
                     alt={`${trip.pickupProvince} - ${trip.dropOffProvince}`}
