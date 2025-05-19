@@ -11,20 +11,13 @@ const {
 const {
   verifyTokenAndRoleAuth,
   verifyToken,
+  verifyAdminOnly,
 } = require("../controllers/middlewareController");
 
-router.post("/promotions", verifyTokenAndRoleAuth(["GARAGE"]), createPromotion);
+router.post("/promotions", verifyAdminOnly(), createPromotion);
 router.get("/promotions", verifyToken, getAllPromotions);
 router.get("/promotions/:id", verifyToken, getPromotionById);
-router.put(
-  "/promotions/:id",
-  verifyTokenAndRoleAuth(["GARAGE"]),
-  updatePromotion
-);
-router.delete(
-  "/promotions/:id",
-  verifyTokenAndRoleAuth(["GARAGE"]),
-  deletePromotion
-);
+router.put("/promotions/:id", verifyAdminOnly(), updatePromotion);
+router.delete("/promotions/:id", verifyAdminOnly(), deletePromotion);
 
 module.exports = router;

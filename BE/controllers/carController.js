@@ -7,7 +7,7 @@ const createCar = async (req, res) => {
   try {
     const { nameCar, licensePlate, features, seats, vehicleType, image } =
       req.body;
-    const user = req.user; // Giả định req.user từ middleware xác thực
+    const user = req.user;
 
     // Kiểm tra thông tin user
     if (!user || !user.id || !user.role) {
@@ -17,8 +17,8 @@ const createCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được tạo xe
-    if (!["GARAGE", "ADMIN"].includes(user.role)) {
+    // Kiểm tra quyền: Chỉ USER hoặc ADMIN được tạo xe
+    if (!["USER", "ADMIN"].includes(user.role)) {
       return res.status(403).json({
         errCode: 1,
         message: "You do not have permission to create a car",
@@ -41,6 +41,14 @@ const createCar = async (req, res) => {
       });
     }
 
+    // Kiểm tra vehicleType hợp lệ
+    if (vehicleType && !["SIT", "BED"].includes(vehicleType)) {
+      return res.status(400).json({
+        errCode: 1,
+        message: "Invalid vehicle type. Must be SIT or BED",
+      });
+    }
+
     // Kiểm tra biển số xe đã tồn tại
     const existingCar = await Car.findOne({ licensePlate }).lean();
     if (existingCar) {
@@ -56,8 +64,8 @@ const createCar = async (req, res) => {
       licensePlate,
       features: Array.isArray(features) ? features : [],
       seats,
-      vehicleType,
-      image: image || null, // Lưu URL hoặc null nếu không có
+      vehicleType: vehicleType || "SIT",
+      image: image || null,
       userId: user.id,
     });
 
@@ -104,12 +112,20 @@ const getAllCars = async (req, res) => {
 
     // Xây dựng bộ lọc
     const filter = {};
-    if (user.role === "GARAGE") {
-      filter.userId = user.id; // Chỉ lấy xe của GARAGE
+    if (user.role === "USER") {
+      filter.userId = user.id; // Chỉ lấy xe của USER
     }
-    if (licensePlate)
+    if (licensePlate) {
       filter.licensePlate = { $regex: licensePlate, $options: "i" };
-    if (vehicleType && mongoose.isValidObjectId(vehicleType)) {
+    }
+    if (vehicleType) {
+      const validVehicleTypes = ["SIT", "BED"];
+      if (!validVehicleTypes.includes(vehicleType)) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid vehicle type. Must be SIT or BED",
+        });
+      }
       filter.vehicleType = vehicleType;
     }
 
@@ -142,6 +158,7 @@ const getAllCars = async (req, res) => {
   }
 };
 
+// Get all cars without pagination
 const getAllCarsNoPage = async (req, res) => {
   try {
     const { licensePlate, vehicleType } = req.query;
@@ -155,17 +172,25 @@ const getAllCarsNoPage = async (req, res) => {
     }
 
     const filter = {};
-    if (user.role === "GARAGE") {
+    if (user.role === "ADMIN") {
       filter.userId = user.id;
     }
-    if (licensePlate)
+    if (licensePlate) {
       filter.licensePlate = { $regex: licensePlate, $options: "i" };
-    if (vehicleType && mongoose.isValidObjectId(vehicleType)) {
+    }
+    if (vehicleType) {
+      const validVehicleTypes = ["SIT", "BED"];
+      if (!validVehicleTypes.includes(vehicleType)) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid vehicle type. Must be SIT or BED",
+        });
+      }
       filter.vehicleType = vehicleType;
     }
 
     const cars = await Car.find(filter)
-      .select("nameCar licensePlate seats") // 🛠 Chỉ lấy các trường cần thiết
+      .select("nameCar licensePlate seats vehicleType")
       .populate("userId", "username email")
       .sort({ createdAt: -1 })
       .lean();
@@ -194,7 +219,6 @@ const getCarById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Kiểm tra ID hợp lệ
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         errCode: 1,
@@ -202,7 +226,6 @@ const getCarById = async (req, res) => {
       });
     }
 
-    // Tìm xe
     const car = await Car.findById(id)
       .populate("userId", "username email")
       .lean();
@@ -232,25 +255,17 @@ const getCarById = async (req, res) => {
 const updateCar = async (req, res) => {
   try {
     const { id } = req.params;
-
     const { nameCar, licensePlate, features, seats, vehicleType, image } =
       req.body;
     const user = req.user;
 
-    if (!id) {
-      return res.status(400).json({
-        errCode: 1,
-        message: "Car ID is missing in request",
-      });
-    }
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         errCode: 1,
-        message: `Invalid car ID: ${id}. It must be a valid MongoDB ObjectID (24 hex characters)`,
+        message: "Invalid car ID",
       });
     }
 
-    // Kiểm tra thông tin user
     if (!user || !user.id || !user.role) {
       return res.status(403).json({
         errCode: 1,
@@ -258,15 +273,13 @@ const updateCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được cập nhật
-    if (!["GARAGE", "ADMIN"].includes(user.role)) {
+    if (!["USER", "ADMIN"].includes(user.role)) {
       return res.status(403).json({
         errCode: 1,
         message: "You do not have permission to update this car",
       });
     }
 
-    // Tìm xe
     const car = await Car.findById(id);
     if (!car) {
       return res.status(404).json({
@@ -275,7 +288,6 @@ const updateCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra quyền sở hữu
     const isOwner = car.userId.toString() === user.id;
     if (!isOwner && user.role !== "ADMIN") {
       return res.status(403).json({
@@ -284,14 +296,13 @@ const updateCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra dữ liệu đầu vào
     if (
       !nameCar &&
       !licensePlate &&
       !features &&
       !seats &&
       !vehicleType &&
-      !image
+      image === undefined
     ) {
       return res.status(400).json({
         errCode: 1,
@@ -299,7 +310,6 @@ const updateCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra seats nếu cung cấp
     if (seats && (!Number.isInteger(seats) || seats <= 0)) {
       return res.status(400).json({
         errCode: 1,
@@ -307,7 +317,13 @@ const updateCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra biển số xe nếu được cập nhật
+    if (vehicleType && !["SIT", "BED"].includes(vehicleType)) {
+      return res.status(400).json({
+        errCode: 1,
+        message: "Invalid vehicle type. Must be SIT or BED",
+      });
+    }
+
     if (licensePlate && licensePlate !== car.licensePlate) {
       const existingCar = await Car.findOne({ licensePlate }).lean();
       if (existingCar) {
@@ -318,7 +334,6 @@ const updateCar = async (req, res) => {
       }
     }
 
-    // Tạo object chứa các trường cần cập nhật
     const updateFields = {};
     if (nameCar) updateFields.nameCar = nameCar;
     if (licensePlate) updateFields.licensePlate = licensePlate;
@@ -328,7 +343,6 @@ const updateCar = async (req, res) => {
     if (vehicleType) updateFields.vehicleType = vehicleType;
     if (image !== undefined) updateFields.image = image || null;
 
-    // Cập nhật xe
     const updatedCar = await Car.findByIdAndUpdate(
       id,
       { $set: updateFields },
@@ -370,7 +384,6 @@ const deleteCar = async (req, res) => {
     const { id } = req.params;
     const user = req.user;
 
-    // Kiểm tra ID hợp lệ
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
         errCode: 1,
@@ -378,7 +391,6 @@ const deleteCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra thông tin user
     if (!user || !user.id || !user.role) {
       return res.status(403).json({
         errCode: 1,
@@ -386,15 +398,13 @@ const deleteCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được xóa
-    if (!["GARAGE", "ADMIN"].includes(user.role)) {
+    if (!["USER", "ADMIN"].includes(user.role)) {
       return res.status(403).json({
         errCode: 1,
         message: "You do not have permission to delete this car",
       });
     }
 
-    // Tìm xe
     const car = await Car.findById(id);
     if (!car) {
       return res.status(404).json({
@@ -403,7 +413,6 @@ const deleteCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra quyền sở hữu
     const isOwner = car.userId.toString() === user.id;
     if (!isOwner && user.role !== "ADMIN") {
       return res.status(403).json({
@@ -412,10 +421,9 @@ const deleteCar = async (req, res) => {
       });
     }
 
-    // Kiểm tra xem xe có đang được sử dụng trong chuyến nào không
     const activeTrips = await Trip.find({
       carId: id,
-      status: { $nin: ["Completed", "Canceled"] },
+      status: { $nin: ["Đã đến", "Đã hủy"] },
     }).lean();
     if (activeTrips.length > 0) {
       return res.status(400).json({
@@ -424,7 +432,6 @@ const deleteCar = async (req, res) => {
       });
     }
 
-    // Xóa xe
     await Car.findByIdAndDelete(id);
 
     return res.status(200).json({

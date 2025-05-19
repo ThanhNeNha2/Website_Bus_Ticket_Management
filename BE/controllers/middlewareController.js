@@ -23,6 +23,7 @@ const validRoles = ["ADMIN", "GARAGE", "USER"];
 const verifyTokenAndRoleAndID = (allowedRoles) => (req, res, next) => {
   verifyToken(req, res, () => {
     const user = req.user;
+    console.log("user", user);
 
     if (!user || !user.role) {
       return res
@@ -70,8 +71,55 @@ const verifyTokenAndRoleAuth = (allowedRoles) => (req, res, next) => {
   });
 };
 
+const verifyToken_ADMIN_ID = () => (req, res, next) => {
+  verifyToken(req, res, () => {
+    if (!req.user || !req.user.role || !req.user.id) {
+      return res
+        .status(403)
+        .json({ message: "Không có thông tin người dùng hoặc vai trò" });
+    }
+
+    // Nếu là admin thì cho phép
+    if (req.user.role === "ADMIN") {
+      return next();
+    }
+
+    // Nếu là chính người dùng (giả sử bạn truyền ID người dùng qua params hoặc body)
+    const userIdFromRequest = req.params.id || req.body.id;
+    if (req.user.id === userIdFromRequest) {
+      return next();
+    }
+
+    // Trường hợp còn lại: không có quyền
+    return res
+      .status(403)
+      .json({ message: "Bạn không có quyền thực hiện chức năng này" });
+  });
+};
+
+const verifyAdminOnly = () => (req, res, next) => {
+  verifyToken(req, res, () => {
+    if (!req.user || !req.user.role) {
+      console.log("req ", req);
+
+      return res
+        .status(403)
+        .json({ message: "Không có thông tin người dùng hoặc vai trò" });
+    }
+
+    if (req.user.role === "ADMIN") {
+      return next();
+    }
+
+    return res.status(403).json({
+      message: "Chỉ quản trị viên mới có quyền thực hiện chức năng này",
+    });
+  });
+};
 module.exports = {
   verifyToken,
   verifyTokenAndRoleAuth,
   verifyTokenAndRoleAndID,
+  verifyAdminOnly,
+  verifyToken_ADMIN_ID,
 };

@@ -198,21 +198,11 @@ const getAllPromotions = async (req, res) => {
     } = req.query;
     const user = req.user;
 
-    console.log(" check thong tin code ", code);
-
     // Kiểm tra thông tin user
     if (!user || !user.id || !user.role) {
       return res.status(403).json({
         errCode: 1,
         message: "No user information or role provided",
-      });
-    }
-
-    // Kiểm tra quyền
-    if (!["GARAGE", "ADMIN"].includes(user.role)) {
-      return res.status(403).json({
-        errCode: 1,
-        message: "You do not have permission to view promotions",
       });
     }
 
@@ -319,12 +309,6 @@ const getPromotionById = async (req, res) => {
         errCode: 1,
         message: "No user information or role provided",
       });
-    }
-
-    // Tìm promotion
-    const filter = { _id: id };
-    if (user.role === "GARAGE") {
-      filter.garageId = user.id;
     }
 
     const promotion = await Promotion.findOne(filter)

@@ -137,10 +137,11 @@ const getAllTrips = async (req, res) => {
       pickupProvince,
       dropOffProvince,
       departureDate,
+      carType,
       page = 1,
-      limit = 2,
+      limit = 10,
     } = req.query;
-    const user = req.user; // Giả định req.user từ middleware xác thực
+    const user = req.user;
 
     // Kiểm tra thông tin user
     if (!user || !user.id || !user.role) {
@@ -150,20 +151,16 @@ const getAllTrips = async (req, res) => {
       });
     }
 
-    // Kiểm tra quyền: Chỉ GARAGE hoặc ADMIN được truy cập
-    // if (!["GARAGE", "ADMIN"].includes(user.role)) {
-    //   return res.status(403).json({
-    //     errCode: 1,
-    //     message: "You do not have permission to view trips",
-    //   });
-    // }
-
     // Xây dựng bộ lọc
     const filter = {};
-    if (pickupPoint) filter.pickupPoint = pickupPoint;
-    if (dropOffPoint) filter.dropOffPoint = dropOffPoint;
-    if (pickupProvince) filter.pickupProvince = pickupProvince;
-    if (dropOffProvince) filter.dropOffProvince = dropOffProvince;
+    if (pickupPoint)
+      filter.pickupPoint = { $regex: pickupPoint, $options: "i" };
+    if (dropOffPoint)
+      filter.dropOffPoint = { $regex: dropOffPoint, $options: "i" };
+    if (pickupProvince)
+      filter.pickupProvince = { $regex: pickupProvince, $options: "i" };
+    if (dropOffProvince)
+      filter.dropOffProvince = { $regex: dropOffProvince, $options: "i" };
     if (departureDate) {
       const startOfDay = new Date(departureDate);
       startOfDay.setHours(0, 0, 0, 0);
@@ -172,17 +169,55 @@ const getAllTrips = async (req, res) => {
       filter.departureDate = { $gte: startOfDay, $lte: endOfDay };
     }
 
+    // Lọc theo vehicleType (SIT hoặc BED)
+    let carIds = [];
+    if (carType) {
+      const validCarTypes = ["SIT", "BED"];
+      if (!validCarTypes.includes(carType)) {
+        return res.status(400).json({
+          errCode: 1,
+          message: "Invalid car type. Must be SIT or BED",
+        });
+      }
+      const carsByType = await Car.find({ vehicleType: carType })
+        .select("_id")
+        .lean();
+      carIds = carsByType.map((car) => car._id);
+      if (carIds.length === 0) {
+        return res.status(404).json({
+          errCode: 1,
+          message: `No cars found with vehicle type ${carType}`,
+        });
+      }
+    }
+
     // Nếu là GARAGE, chỉ lấy chuyến đi thuộc xe của nhà xe
-    if (user.role === "GARAGE") {
-      // Tìm các xe thuộc nhà xe
-      const cars = await Car.find({ userId: user.id }).select("_id").lean();
-      const carIds = cars.map((car) => car._id);
+    // if (user.role === "GARAGE") {
+    //   const carsByUser = await Car.find({ userId: user.id })
+    //     .select("_id")
+    //     .lean();
+    //   const userCarIds = carsByUser.map((car) => car._id);
+    //   // Kết hợp carIds từ vehicleType (nếu có) và userCarIds
+    //   carIds =
+    //     carIds.length > 0
+    //       ? carIds.filter((id) => userCarIds.includes(id))
+    //       : userCarIds;
+    //   if (carIds.length === 0) {
+    //     return res.status(404).json({
+    //       errCode: 1,
+    //       message: "No cars found for this garage",
+    //     });
+    //   }
+    // }
+
+    // Áp dụng carIds vào bộ lọc
+    if (carIds.length > 0) {
       filter.carId = { $in: carIds };
     }
 
     // Phân trang
     const trips = await Trip.find(filter)
-      .populate("carId", "nameCar licensePlate seats")
+      .populate("carId", "nameCar licensePlate seats vehicleType")
       .populate("userId", "username phone address image description email")
       .skip((page - 1) * limit)
       .limit(parseInt(limit))

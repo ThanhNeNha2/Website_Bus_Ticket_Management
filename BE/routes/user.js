@@ -2,6 +2,8 @@ const {
   verifyToken,
   verifyTokenAndRoleAndID,
   verifyTokenAndRoleAuth,
+  verifyAdminOnly,
+  verifyToken_ADMIN_ID,
 } = require("../controllers/middlewareController");
 const {
   getAllUser,
@@ -11,10 +13,10 @@ const {
 } = require("../controllers/userController");
 
 const router = require("express").Router();
-router.get("/", verifyToken, getAllUser);
-router.get("/:id", verifyTokenAndRoleAndID(["ADMIN"]), getUserById);
+router.get("/", verifyAdminOnly(), getAllUser);
+router.get("/:id", verifyToken_ADMIN_ID(), getUserById);
 
-router.delete("/:id", verifyTokenAndRoleAuth(["ADMIN", "GARAGE"]), deleteUser);
-router.put("/:id", verifyTokenAndRoleAndID(["ADMIN", "GARAGE"]), updateUser);
+router.delete("/:id", verifyAdminOnly(), deleteUser);
+router.put("/:id", verifyAdminOnly(), updateUser);
 
 module.exports = router;
