@@ -1,5 +1,15 @@
+import { BrowserRouter } from "react-router-dom";
+
+import CustomRouter from "./Router/CustomRouter";
+import { Toaster } from "react-hot-toast";
+
 function App() {
-  return <div className="text-red-500 font-bold">haha</div>;
+  return (
+    <BrowserRouter>
+      <CustomRouter />
+      <Toaster />
+    </BrowserRouter>
+  );
 }
 
 export default App;
