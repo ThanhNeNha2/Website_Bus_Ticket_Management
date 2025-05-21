@@ -3,88 +3,143 @@ import { FaBus, FaRegImage, FaRegUserCircle } from "react-icons/fa";
 import { FaCarOn } from "react-icons/fa6";
 import { GiLovers } from "react-icons/gi";
 import { IoTicketOutline } from "react-icons/io5";
-import { MdOutlineDescription } from "react-icons/md";
-import { TbLogout2 } from "react-icons/tb";
+import {
+  MdOutlineDescription,
+  MdAccountBalanceWallet,
+  MdDiscount,
+} from "react-icons/md";
+import { TbLogout2, TbChevronRight } from "react-icons/tb";
 import { Link } from "react-router-dom";
 
 const SidebarClient = () => {
   const [activeItem, setActiveItem] = useState("Thông tin tài khoản");
+
   const handleItemClick = (item) => {
     setActiveItem(item);
   };
 
+  const menuItems = [
+    {
+      id: "Thông tin tài khoản",
+      label: "Thông tin tài khoản",
+      icon: FaRegUserCircle,
+      color: "text-blue-500",
+    },
+    {
+      id: "Mã giảm giá ",
+      label: "Mã giảm giá",
+      icon: MdDiscount,
+      color: "text-pink-500",
+    },
+    {
+      id: "Vé của tôi",
+      label: "Vé của tôi",
+      icon: IoTicketOutline,
+      color: "text-green-500",
+    },
+  ];
+
   return (
-    <div className="w-64 h-screen bg-gray-100 text-gray-800 flex flex-col p-4">
-      {/* Điểm tích lũy */}
-      <div className="flex items-center mb-6">
-        <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-2">
-          <span className="text-white">★</span>
+    <div className="w-72 h-screen bg-gradient-to-b from-white to-gray-50 shadow-xl border-r border-gray-100 flex flex-col">
+      {/* Header với avatar */}
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <FaRegUserCircle className="text-white text-lg" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-800">Xin chào!</h3>
+            <p className="text-sm text-gray-500">Khách hàng thân thiết</p>
+          </div>
         </div>
-        <span className="font-semibold">100 điểm</span>
+
+        {/* Điểm tích lũy với thiết kế đẹp hơn */}
+        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm opacity-90">Điểm tích lũy</p>
+              <p className="text-2xl font-bold">100</p>
+            </div>
+            <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <span className="text-xl">⭐</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Menu */}
-      <ul className="space-y-2">
-        <li
-          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${
-            activeItem === "Thông tin tài khoản"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-200 hover:text-blue-600"
-          }`}
-          onClick={() => handleItemClick("Thông tin tài khoản")}
-        >
-          <FaRegUserCircle />
-          <span>Thông tin tài khoản</span>
-        </li>
-        <li
-          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${
-            activeItem === "Bạn bè"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-200 hover:text-blue-600"
-          }`}
-          onClick={() => handleItemClick("Bạn bè")}
-        >
-          <GiLovers />
-          <span>Bạn bè</span>
-        </li>
-        <li
-          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${
-            activeItem === "Vé của tôi"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-200 hover:text-blue-600"
-          }`}
-          onClick={() => handleItemClick("Vé của tôi")}
-        >
-          <IoTicketOutline />
-          <span>Vé của tôi</span>
-        </li>
-        <li
-          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${
-            activeItem === "Biến động tài khoản"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-200 hover:text-blue-600"
-          }`}
-          onClick={() => handleItemClick("Biến động tài khoản")}
-        >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2a10 10 0 00-8 4v12a10 10 0 008 4 10 10 0 008-4V6a10 10 0 00-8-4zm0 2a2 2 0 110 4 2 2 0 010-4z" />
-          </svg>
-          <span>Biến động tài khoản</span>
-        </li>
-        <li
-          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer transition-colors duration-200 ${
-            activeItem === "Đăng xuất"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-200 hover:text-blue-600"
-          }`}
-          onClick={() => handleItemClick("Đăng xuất")}
-        >
-          <TbLogout2 />
-          <Link to={"/login"}>
-            <span>Đăng xuất</span>
-          </Link>
-        </li>
-      </ul>
+      {/* Menu Items */}
+      <div className="flex-1 p-4">
+        <nav className="space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeItem === item.id;
+
+            return (
+              <div
+                key={item.id}
+                className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-300 ${
+                  isActive
+                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105"
+                    : "hover:bg-gray-100 hover:shadow-md hover:transform hover:scale-102"
+                }`}
+                onClick={() => handleItemClick(item.id)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`p-2 rounded-lg ${
+                      isActive
+                        ? "bg-white bg-opacity-20"
+                        : "bg-gray-100 group-hover:bg-white"
+                    }`}
+                  >
+                    <Icon
+                      className={`text-lg ${
+                        isActive
+                          ? "text-white"
+                          : `${item.color} group-hover:${item.color}`
+                      }`}
+                    />
+                  </div>
+                  <span
+                    className={`font-medium ${
+                      isActive
+                        ? "text-white"
+                        : "text-gray-700 group-hover:text-gray-800"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </div>
+
+                <TbChevronRight
+                  className={`transition-transform duration-200 ${
+                    isActive
+                      ? "text-white transform rotate-90"
+                      : "text-gray-400 group-hover:text-gray-600 group-hover:transform group-hover:translate-x-1"
+                  }`}
+                />
+              </div>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Logout Button */}
+      <div className="p-4 border-t border-gray-100">
+        <Link to="/login">
+          <div
+            className="flex items-center space-x-3 p-3 rounded-xl cursor-pointer transition-all duration-300 hover:bg-red-50 hover:shadow-md group"
+            onClick={() => handleItemClick("Đăng xuất")}
+          >
+            <div className="p-2 rounded-lg bg-red-100 group-hover:bg-red-200">
+              <TbLogout2 className="text-lg text-red-500" />
+            </div>
+            <span className="font-medium text-gray-700 group-hover:text-red-600">
+              Đăng xuất
+            </span>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 };

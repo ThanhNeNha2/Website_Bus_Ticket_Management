@@ -9,6 +9,7 @@ import Register from "../Pages/Register/Register";
 import ClientLayout from "../Layouts/ClientLayout";
 import InfoUser from "../Components/InfoUser";
 import BookTicket from "../Pages/BookTicket/BookTicket";
+import InfoTicket from "../Components/InfoTicket";
 
 // Component ProtectedRoute để kiểm tra token và vai trò
 const ProtectedRoute = ({ children, allowedRoles, requireAuth = true }) => {
@@ -50,6 +51,7 @@ const CustomRouter = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/news"
           element={
@@ -77,6 +79,7 @@ const CustomRouter = () => {
         }
       >
         <Route path="/info" element={<InfoUser />} />
+        <Route path="/infoTicket" element={<InfoTicket />} />
       </Route>
 
       {/* 404 fallback */}

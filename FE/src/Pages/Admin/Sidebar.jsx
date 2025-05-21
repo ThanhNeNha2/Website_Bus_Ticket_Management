@@ -82,7 +82,7 @@ const Sidebar = () => {
         <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center mr-2">
           <span className="text-white">★</span>
         </div>
-        <span className="font-semibold">100 điểm</span>
+        <span className="font-semibold">100 điểm kkk</span>
       </div>
 
       {/* Menu */}

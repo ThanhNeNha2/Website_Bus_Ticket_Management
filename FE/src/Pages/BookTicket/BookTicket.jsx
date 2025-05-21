@@ -216,11 +216,8 @@ const BookTicket = () => {
   const handleConfirmBooking = () => {
     const ticketData = {
       tripId: id,
-      userId: userId._id,
-      numberOfTickets,
-      totalPrice: priceSale,
-      promoCode: codeSale || null,
-      status: "Đã đặt",
+
+      ticketPrice: priceSale,
     };
 
     bookTicketMutation.mutate(ticketData);
