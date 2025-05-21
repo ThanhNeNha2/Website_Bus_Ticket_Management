@@ -229,14 +229,16 @@ const InfoPromotion = () => {
   };
 
   return (
-    <div className="flex-1 p-6 bg-gray-50">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Quản lý mã giảm giá</h2>
+    <div className="flex-1 p-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-semibold text-gray-800">
+          Quản lý mã giảm giá
+        </h2>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow-md transition"
         >
-          Thêm mã giảm giá
+          + Thêm mã giảm giá
         </button>
       </div>
 
@@ -244,37 +246,43 @@ const InfoPromotion = () => {
         <p className="text-red-500 text-center mb-4">{error.message}</p>
       )}
 
-      <div className="overflow-x-auto mb-7">
-        <table className="min-w-full bg-white border border-gray-200">
+      <div className="overflow-x-auto shadow-md rounded-lg mb-10">
+        <table className="min-w-full bg-white border border-gray-200 rounded-lg">
           <thead>
-            <tr className="bg-gray-100">
-              <th className="py-2 px-4 border-b text-left">Mã</th>
-              <th className="py-2 px-4 border-b text-left">Mô tả</th>
-              <th className="py-2 px-4 border-b text-left">Loại giảm giá</th>
-              <th className="py-2 px-4 border-b text-left">Giá trị giảm</th>
-              <th className="py-2 px-4 border-b text-left">Ngày bắt đầu</th>
-              <th className="py-2 px-4 border-b text-left">Ngày hết hạn</th>
-              <th className="py-2 px-4 border-b text-left">Đã dùng/Tổng</th>
-              <th className="py-2 px-4 border-b text-left">Trạng thái</th>
-              <th className="py-2 px-4 border-b text-left">Hành động</th>
+            <tr className="bg-gray-100 text-gray-700 text-sm uppercase">
+              {[
+                "Mã",
+                "Mô tả",
+                "Loại giảm giá",
+                "Giá trị giảm",
+                "Ngày bắt đầu",
+                "Ngày hết hạn",
+                "Đã dùng/Tổng",
+                "Trạng thái",
+                "Hành động",
+              ].map((header, i) => (
+                <th key={i} className="py-3 px-4 border-b text-left">
+                  {header}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-gray-700 text-sm">
             {isLoading ? (
               <tr>
-                <td colSpan="9" className="py-4 px-4 text-center text-blue-500">
+                <td colSpan="9" className="text-center py-6 text-blue-500">
                   Đang tải dữ liệu...
                 </td>
               </tr>
             ) : promotions.length === 0 ? (
               <tr>
-                <td colSpan="9" className="py-4 px-4 text-center text-red-500">
+                <td colSpan="9" className="text-center py-6 text-red-500">
                   Dữ liệu chưa được cập nhật
                 </td>
               </tr>
             ) : (
               promotions.map((promotion) => (
-                <tr key={promotion._id}>
+                <tr key={promotion._id} className="hover:bg-gray-50 transition">
                   <td className="py-2 px-4 border-b font-semibold">
                     {promotion.code || "Chưa cập nhật"}
                   </td>
@@ -302,17 +310,17 @@ const InfoPromotion = () => {
                       : "Chưa cập nhật"}
                   </td>
                   <td className="py-2 px-4 border-b">
-                    {promotion.usedCount !== null && promotion.maxUses !== null
+                    {promotion.usedCount != null && promotion.maxUses != null
                       ? `${promotion.usedCount}/${promotion.maxUses}`
                       : "Chưa cập nhật"}
                   </td>
                   <td className="py-2 px-4 border-b">
                     {promotion.status || "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-2 px-4 border-b flex gap-2">
                     <button
                       onClick={() => openEditModal(promotion)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm"
                     >
                       Sửa
                     </button>
@@ -324,7 +332,7 @@ const InfoPromotion = () => {
                           id: promotion._id,
                         });
                       }}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
                       disabled={deletePromotionMutation.isLoading}
                     >
                       Xóa
@@ -337,18 +345,18 @@ const InfoPromotion = () => {
         </table>
       </div>
 
+      {/* Modal xác nhận xóa */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-2xl shadow-lg max-w-md w-full text-center">
-            <h3 className="text-xl font-bold mb-4">Xóa mã giảm giá</h3>
-            <span className="text-base font-normal">
-              Bạn chắc chắn muốn xóa mã giảm giá :{" "}
-              <p className="font-semibold">{infoDelete.code}</p>
-            </span>
-            <div className="flex justify-center gap-4 mt-5">
+          <div className="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full text-center">
+            <h3 className="text-xl font-bold mb-3">Xóa mã giảm giá</h3>
+            <p className="text-gray-700 mb-4">
+              Bạn chắc chắn muốn xóa mã: <strong>{infoDelete.code}</strong>?
+            </p>
+            <div className="flex justify-center gap-4">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300"
               >
                 Hủy
               </button>

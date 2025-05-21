@@ -204,79 +204,88 @@ const ManagerUser = () => {
 
   return (
     <div className="flex-1 p-6 bg-gray-50">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Quản lý người dùng</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-semibold text-gray-800">
+          Quản lý người dùng
+        </h2>
       </div>
 
       {error && (
         <p className="text-red-500 text-center mb-4">{error.message}</p>
       )}
 
-      <div className="overflow-x-auto mb-7">
-        <table className="min-w-full bg-white border border-gray-200">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="py-2 px-4 border-b text-left">Tên</th>
-              <th className="py-2 px-4 border-b text-left">Gmail</th>
-              <th className="py-2 px-4 border-b text-left">Số điện thoại</th>
-              <th className="py-2 px-4 border-b text-left">Địa chỉ</th>
-              <th className="py-2 px-4 border-b text-left">Ngày tạo</th>
-              <th className="py-2 px-4 border-b text-left">Vai trò</th>
-              <th className="py-2 px-4 border-b text-left">Hành động</th>
+      <div className="overflow-x-auto rounded-xl shadow mb-8">
+        <table className="min-w-full bg-white border border-gray-200 rounded-xl">
+          <thead className="bg-gray-100 text-gray-700 text-sm uppercase">
+            <tr>
+              <th className="py-3 px-4 text-left">Tên</th>
+              <th className="py-3 px-4 text-left">Gmail</th>
+              <th className="py-3 px-4 text-left">Số điện thoại</th>
+              <th className="py-3 px-4 text-left">Địa chỉ</th>
+              <th className="py-3 px-4 text-left">Ngày tạo</th>
+              <th className="py-3 px-4 text-left">Vai trò</th>
+              <th className="py-3 px-4 text-left">Hành động</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-gray-700">
             {isLoading ? (
               <tr>
-                <td colSpan="7" className="py-4 px-4 text-center text-blue-500">
+                <td colSpan="7" className="py-5 px-4 text-center text-blue-500">
                   Đang tải dữ liệu...
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan="7" className="py-4 px-4 text-center text-red-500">
+                <td colSpan="7" className="py-5 px-4 text-center text-red-500">
                   Dữ liệu chưa được cập nhật
                 </td>
               </tr>
             ) : (
               users.map((user) => (
-                <tr key={user._id}>
-                  <td className="py-2 px-4 border-b font-semibold">
+                <tr
+                  key={user._id}
+                  className="hover:bg-gray-50 transition duration-200"
+                >
+                  <td className="py-3 px-4 border-b font-semibold">
                     {user.username}
                   </td>
-                  <td className="py-2 px-4 border-b">{user.email}</td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-4 border-b">{user.email}</td>
+                  <td className="py-3 px-4 border-b">
                     {user.phone || "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-4 border-b">
                     {user.address || "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
-                    <div className="font-medium">
+                  <td className="py-3 px-4 border-b">
+                    <span className="font-medium">
                       {new Date(user.createdAt).toLocaleDateString("vi-VN")}
-                    </div>
+                    </span>
                   </td>
-                  <td className="py-2 px-4 border-b">{user.role || "USER"}</td>
-                  <td className="py-2 px-4 border-b">
-                    <button
-                      onClick={() => openEditModal(user)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsDeleteModalOpen(true);
-                        setInfoDelete({
-                          InfoUsername: user.username,
-                          id: user._id,
-                        });
-                      }}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                      disabled={deleteUserMutation.isLoading}
-                    >
-                      Xóa
-                    </button>
+                  <td className="py-3 px-4 border-b capitalize">
+                    {user.role || "USER"}
+                  </td>
+                  <td className="py-3 px-4 border-b">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openEditModal(user)}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded-lg hover:bg-yellow-600 transition"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsDeleteModalOpen(true);
+                          setInfoDelete({
+                            InfoUsername: user.username,
+                            id: user._id,
+                          });
+                        }}
+                        className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition"
+                        disabled={deleteUserMutation.isLoading}
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -287,22 +296,26 @@ const ManagerUser = () => {
 
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-2xl shadow-lg max-w-md w-full text-center">
-            <h3 className="text-xl font-bold mb-4">Xóa người dùng</h3>
-            <span className="text-base font-normal">
-              Bạn chắc chắn muốn xóa người dùng với tên:{" "}
-              <p className="font-semibold">{infoDelete.InfoUsername}</p>
-            </span>
-            <div className="flex justify-center gap-4 mt-5">
+          <div className="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full text-center">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">
+              Xóa người dùng
+            </h3>
+            <p className="text-gray-600 text-base">
+              Bạn chắc chắn muốn xóa người dùng với tên:
+            </p>
+            <p className="font-semibold text-lg mt-2">
+              {infoDelete.InfoUsername}
+            </p>
+            <div className="flex justify-center gap-4 mt-6">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition"
               >
                 Hủy
               </button>
               <button
                 onClick={handleDeleteUser}
-                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600 transition"
               >
                 Xóa
               </button>
@@ -311,7 +324,6 @@ const ManagerUser = () => {
         </div>
       )}
 
-      {/* Modal Sửa Người Dùng */}
       {isEditModalOpen && (
         <UpdateInfoUser
           formData={formData}

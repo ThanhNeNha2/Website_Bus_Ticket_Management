@@ -10,6 +10,7 @@ import BookTicket from "../Pages/Ticket/InfoTicket";
 import InfoPromotion from "../Pages/InfoPromotion/InfoPromotion";
 import InfoCar from "../Pages/Car/InfoCar";
 import ManagerUser from "../Pages/User/ManagerUser";
+import Note from "../Components/Noti/Note";
 
 // Component ProtectedRoute để kiểm tra token và vai trò
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -45,6 +46,8 @@ const CustomRouter = () => {
     <Routes>
       <Route path="/register" element={<Register />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/note" element={<Note />} />
+
       <Route
         element={
           <ProtectedRoute allowedRoles={["ADMIN"]}>
@@ -66,7 +69,7 @@ const CustomRouter = () => {
         path="*"
         element={
           <Navigate
-            to="/login"
+            to="/note"
             replace
             state={{ from: window.location.pathname }}
           />

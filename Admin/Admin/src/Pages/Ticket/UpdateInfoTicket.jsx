@@ -61,10 +61,10 @@ const UpdateInfoTicket = ({
               required
             >
               <option value="">-- Chọn trạng thái --</option>
-              <option value="Booked">Đã đặt</option>
-              <option value="Confirmed">Đã xác nhận</option>
-              <option value="Canceled">Đã hủy</option>
-              <option value="Used">Đã sử dụng</option>
+              <option value="Đã đặt">Đã đặt</option>
+
+              <option value="Đã hủy">Đã hủy</option>
+              <option value="Hết hiệu lực">Đã sử dụng</option>
             </select>
           </div>
 

@@ -239,16 +239,17 @@ const TripManagement = () => {
     const newPage = event.selected + 1;
     setCurrentPage(newPage);
   };
-
   return (
-    <div className="flex-1 p-6 bg-gray-50">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Quản lý chuyến xe</h2>
+    <div className="flex-1 p-6 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-semibold text-gray-800">
+          Quản lý chuyến xe
+        </h2>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700 transition duration-300"
         >
-          Thêm chuyến xe
+          + Thêm chuyến xe
         </button>
       </div>
 
@@ -256,62 +257,63 @@ const TripManagement = () => {
         <p className="text-red-500 text-center mb-4">{error.message}</p>
       )}
 
-      <div className="overflow-x-auto mb-7">
-        <table className="min-w-full bg-white border border-gray-200">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="py-2 px-4 border-b text-left">Thông tin xe</th>
-              <th className="py-2 px-4 border-b text-left">Điểm đón khách</th>
-              <th className="py-2 px-4 border-b text-left">Lộ trình</th>
-              <th className="py-2 px-4 border-b text-left">Giá vé</th>
-              <th className="py-2 px-4 border-b text-left">
-                Tổng ghế/Số ghế trống
-              </th>
-              <th className="py-2 px-4 border-b text-left">Ngày đi - Giờ đi</th>
-              <th className="py-2 px-4 border-b text-left">Trạng thái</th>
-              <th className="py-2 px-4 border-b text-left">Hành động</th>
+      <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-200 mb-8">
+        <table className="min-w-full text-sm text-left text-gray-600">
+          <thead className="text-xs uppercase bg-gray-100 text-gray-700">
+            <tr>
+              <th className="py-3 px-5">Thông tin xe</th>
+              <th className="py-3 px-5">Điểm đón khách</th>
+              <th className="py-3 px-5">Lộ trình</th>
+              <th className="py-3 px-5">Giá vé</th>
+              <th className="py-3 px-5">Tổng ghế / Trống</th>
+              <th className="py-3 px-5">Ngày đi - Giờ đi</th>
+              <th className="py-3 px-5">Trạng thái</th>
+              <th className="py-3 px-5 text-center">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan="8" className="py-4 px-4 text-center text-blue-500">
+                <td colSpan="8" className="text-center py-6 text-blue-500">
                   Đang tải dữ liệu...
                 </td>
               </tr>
             ) : trips.length === 0 ? (
               <tr>
-                <td colSpan="8" className="py-4 px-4 text-center text-red-500">
+                <td colSpan="8" className="text-center py-6 text-red-500">
                   Dữ liệu chưa được cập nhật
                 </td>
               </tr>
             ) : (
               trips.map((trip) => (
-                <tr key={trip._id}>
-                  <td className="py-2 px-4 border-b font-semibold">
+                <tr
+                  key={trip._id}
+                  className="border-t hover:bg-gray-50 transition duration-200"
+                >
+                  <td className="py-3 px-5 font-medium">
                     {trip.carId
                       ? `${trip.carId.nameCar} - ${trip.carId.licensePlate}`
                       : "Xe chưa được gán"}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-5">
                     {trip.pickupPoint || "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-5">
                     {trip.pickupProvince && trip.dropOffProvince
                       ? `${trip.pickupProvince} - ${trip.dropOffProvince}`
                       : "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-5">
                     {trip.ticketPrice
-                      ? `${trip.ticketPrice} VNĐ`
+                      ? `${trip.ticketPrice.toLocaleString()} VNĐ`
                       : "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-5">
                     {trip.totalSeats && trip.seatsAvailable
                       ? `${trip.totalSeats}/${trip.seatsAvailable}`
                       : "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-5">
                     {trip.departureDate && trip.departureTime ? (
                       <>
                         {format(new Date(trip.departureDate), "dd/MM/yyyy")} -{" "}
@@ -321,32 +323,34 @@ const TripManagement = () => {
                       "Chưa cập nhật"
                     )}
                   </td>
-                  <td className="py-2 px-4 border-b">
+                  <td className="py-3 px-5">
                     {trip.status || "Chưa cập nhật"}
                   </td>
-                  <td className="py-2 px-4 border-b">
-                    <button
-                      onClick={() => openEditModal(trip)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded mr-2 hover:bg-yellow-600"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsDeleteModalOpen(true);
-                        setInfoDelete({
-                          InfoLicensePlate:
-                            trip.pickupProvince && trip.dropOffProvince
-                              ? `${trip.pickupProvince} - ${trip.dropOffProvince}`
-                              : "Chưa cập nhật",
-                          id: trip._id,
-                        });
-                      }}
-                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                      disabled={deleteTripMutation.isLoading}
-                    >
-                      Xóa
-                    </button>
+                  <td className="py-3 px-5 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => openEditModal(trip)}
+                        className="bg-yellow-500 text-white px-3 py-1 rounded-md hover:bg-yellow-600 transition duration-300"
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsDeleteModalOpen(true);
+                          setInfoDelete({
+                            InfoLicensePlate:
+                              trip.pickupProvince && trip.dropOffProvince
+                                ? `${trip.pickupProvince} - ${trip.dropOffProvince}`
+                                : "Chưa cập nhật",
+                            id: trip._id,
+                          });
+                        }}
+                        className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition duration-300"
+                        disabled={deleteTripMutation.isLoading}
+                      >
+                        Xóa
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -355,24 +359,27 @@ const TripManagement = () => {
         </table>
       </div>
 
+      {/* Modal Xác nhận xóa */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-2xl shadow-lg max-w-md w-full text-center">
-            <h3 className="text-xl font-bold mb-4">Xóa chuyến xe</h3>
-            <span className="text-base font-normal">
-              Bạn chắc chắn muốn xóa chuyến xe :{" "}
-              <p className="font-semibold">{infoDelete.InfoLicensePlate}</p>
-            </span>
-            <div className="flex justify-center gap-4 mt-5">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full text-center">
+            <h3 className="text-xl font-bold mb-3">Xóa chuyến xe</h3>
+            <p className="text-gray-700 mb-5">
+              Bạn chắc chắn muốn xóa chuyến xe:{" "}
+              <span className="font-semibold">
+                {infoDelete.InfoLicensePlate}
+              </span>
+            </p>
+            <div className="flex justify-center gap-4">
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                className="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400"
               >
                 Hủy
               </button>
               <button
                 onClick={handleDeleteTrip}
-                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                className="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
               >
                 Xóa
               </button>
@@ -381,6 +388,7 @@ const TripManagement = () => {
         </div>
       )}
 
+      {/* Modal Thêm chuyến xe */}
       {isAddModalOpen && (
         <AddInfoTrip
           handleAddTrip={handleAddTrip}
@@ -392,6 +400,7 @@ const TripManagement = () => {
         />
       )}
 
+      {/* Modal Sửa chuyến xe */}
       {isEditModalOpen && (
         <UpdateInfoTrip
           formData={formData}
