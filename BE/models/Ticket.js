@@ -16,8 +16,8 @@ const ticketSchema = new mongoose.Schema(
     ticketPrice: { type: Number, required: true, min: 0 },
     status: {
       type: String,
-      enum: ["Booked", "Confirmed", "Canceled", "Used"],
-      default: "Booked",
+      enum: ["Đã đặt", "Đã hủy", "Hết hiệu lực"],
+      default: "Đã đặt",
     },
   },
   { timestamps: true }

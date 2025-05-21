@@ -10,6 +10,8 @@ const createTicket = async (req, res) => {
   try {
     const { tripId, ticketPrice, promotionCode } = req.body;
     const user = req.user; // Giả định req.user từ middleware xác thực
+    console.log("tripId", tripId);
+    console.log("ticketPrice", ticketPrice);
 
     // Kiểm tra dữ liệu đầu vào
     if (!tripId || !ticketPrice) {
@@ -118,7 +120,7 @@ const createTicket = async (req, res) => {
       carId: trip.carId,
       userId: user.id,
       ticketPrice: finalTicketPrice,
-      status: "Booked",
+      status: "Đã đặt",
     });
 
     // Giảm seatsAvailable
@@ -326,23 +328,40 @@ const getTicketById = async (req, res) => {
 //  vé mà chính mình đã đặt
 const getMyTickets = async (req, res) => {
   try {
-    const userId = req.user.id; // lấy user đang đăng nhập từ middleware
+    const userId = req.user.id; // Lấy user đang đăng nhập từ middleware
+    const page = parseInt(req.query.page) || 1; // Mặc định là trang 1
+    const limit = parseInt(req.query.limit) || 10; // Mặc định 10 vé/trang
+    const skip = (page - 1) * limit; // Tính số vé cần bỏ qua
 
+    // Lấy vé với phân trang
     const myTickets = await Ticket.find({ userId })
       .populate({
         path: "tripId",
-        select: "pickupProvince dropOffProvince departureDate departureTime",
+        select:
+          "pickupProvince dropOffProvince departureDate departureTime arrivalTime pickupPoint dropOffPoint",
       })
       .populate({
         path: "carId",
         select: "nameCar licensePlate",
       })
-      .sort({ createdAt: -1 }); // mới nhất trước
+      .sort({ createdAt: -1 }) // Mới nhất trước
+      .skip(skip) // Bỏ qua các vé trước đó
+      .limit(limit); // Giới hạn số vé trả về
+
+    // Lấy tổng số vé để tính tổng số trang
+    const totalTickets = await Ticket.countDocuments({ userId });
+    const totalPages = totalTickets > 0 ? Math.ceil(totalTickets / limit) : 1;
 
     return res.status(200).json({
       errCode: 0,
       message: "Lấy vé thành công",
       tickets: myTickets,
+      pagination: {
+        currentPage: page,
+        limit: limit,
+        totalTickets: totalTickets,
+        totalPages: totalPages,
+      },
     });
   } catch (error) {
     console.error("Lỗi khi lấy vé:", error);

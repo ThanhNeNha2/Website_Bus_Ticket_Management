@@ -149,6 +149,6 @@ const tripSchema = new mongoose.Schema(
 );
 
 // Thêm index để tối ưu truy vấn
-tripSchema.index({ departureDate: 1, pickupPoint: 1, dropOffPoint: 1 });
+tripSchema.index({ _id: 1, departureDate: 1, pickupPoint: 1, dropOffPoint: 1 });
 
 module.exports = mongoose.model("Trip", tripSchema);
