@@ -24,18 +24,21 @@ const SidebarClient = () => {
       label: "Thông tin tài khoản",
       icon: FaRegUserCircle,
       color: "text-blue-500",
+      path: "/info",
     },
     {
-      id: "Mã giảm giá ",
+      id: "Mã giảm giá",
       label: "Mã giảm giá",
       icon: MdDiscount,
       color: "text-pink-500",
+      path: "/infoPromotion",
     },
     {
       id: "Vé của tôi",
       label: "Vé của tôi",
       icon: IoTicketOutline,
       color: "text-green-500",
+      path: "/infoTicket",
     },
   ];
 
@@ -75,50 +78,51 @@ const SidebarClient = () => {
             const isActive = activeItem === item.id;
 
             return (
-              <div
-                key={item.id}
-                className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-300 ${
-                  isActive
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105"
-                    : "hover:bg-gray-100 hover:shadow-md hover:transform hover:scale-102"
-                }`}
-                onClick={() => handleItemClick(item.id)}
-              >
-                <div className="flex items-center space-x-3">
-                  <div
-                    className={`p-2 rounded-lg ${
-                      isActive
-                        ? "bg-white bg-opacity-20"
-                        : "bg-gray-100 group-hover:bg-white"
-                    }`}
-                  >
-                    <Icon
-                      className={`text-lg ${
+              <Link to={item.path} key={item.id}>
+                <div
+                  className={`group relative flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-300 mb-4 ${
+                    isActive
+                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105"
+                      : "hover:bg-gray-100 hover:shadow-md hover:transform hover:scale-102"
+                  }`}
+                  onClick={() => handleItemClick(item.id)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className={`p-2 rounded-lg ${
+                        isActive
+                          ? "bg-white bg-opacity-20"
+                          : "bg-gray-100 group-hover:bg-white"
+                      }`}
+                    >
+                      <Icon
+                        className={`text-lg ${
+                          isActive
+                            ? "text-white"
+                            : `${item.color} group-hover:${item.color}`
+                        }`}
+                      />
+                    </div>
+                    <span
+                      className={`font-medium ${
                         isActive
                           ? "text-white"
-                          : `${item.color} group-hover:${item.color}`
+                          : "text-gray-700 group-hover:text-gray-800"
                       }`}
-                    />
+                    >
+                      {item.label}
+                    </span>
                   </div>
-                  <span
-                    className={`font-medium ${
-                      isActive
-                        ? "text-white"
-                        : "text-gray-700 group-hover:text-gray-800"
-                    }`}
-                  >
-                    {item.label}
-                  </span>
-                </div>
 
-                <TbChevronRight
-                  className={`transition-transform duration-200 ${
-                    isActive
-                      ? "text-white transform rotate-90"
-                      : "text-gray-400 group-hover:text-gray-600 group-hover:transform group-hover:translate-x-1"
-                  }`}
-                />
-              </div>
+                  <TbChevronRight
+                    className={`transition-transform duration-200 ${
+                      isActive
+                        ? "text-white transform rotate-90"
+                        : "text-gray-400 group-hover:text-gray-600 group-hover:transform group-hover:translate-x-1"
+                    }`}
+                  />
+                </div>
+              </Link>
             );
           })}
         </nav>

@@ -15,9 +15,10 @@ import {
   Mail,
   Filter,
   Search,
+  Trash2,
 } from "lucide-react";
 import { api } from "../Util/axios";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Pagination from "./Pagination";
 
 // Format date helper function
@@ -36,8 +37,7 @@ const formatDateTime = (dateString) => {
     .padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 };
 
-// Mock data - replace with your actual API
-
+// Fetch tickets
 const fetchTickets = async ({ page = 1, limit = 5 }) => {
   const token = localStorage.getItem("accessToken");
   if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
@@ -49,11 +49,24 @@ const fetchTickets = async ({ page = 1, limit = 5 }) => {
     totalItems: res.data.pagination.totalTickets || 1,
   };
 };
+
+// Cancel ticket
+const cancelTicket = async (ticketId) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
+  const res = await api.delete(`/tickets/${ticketId}`);
+  if (res.data.errCode !== 0)
+    throw new Error(res.data.message || "Không thể hủy vé.");
+  return res.data;
+};
+
 const UserTickets = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 6;
+
+  const queryClient = useQueryClient();
 
   const {
     data: { tickets = [], totalItems = 1 } = {},
@@ -63,16 +76,35 @@ const UserTickets = () => {
     queryKey: ["tickets", currentPage],
     queryFn: () => fetchTickets({ page: currentPage, limit: itemsPerPage }),
   });
+
+  const cancelMutation = useMutation({
+    mutationFn: cancelTicket,
+    onSuccess: () => {
+      queryClient.invalidateQueries(["tickets", currentPage]);
+      alert("Hủy vé thành công!");
+    },
+    onError: (error) => {
+      alert(`Lỗi: ${error.message}`);
+    },
+  });
+
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handlePageClick = (event) => {
     const newPage = event.selected + 1;
     setCurrentPage(newPage);
   };
+
+  const handleCancelTicket = (ticketId) => {
+    if (window.confirm("Bạn có chắc chắn muốn hủy vé này?")) {
+      cancelMutation.mutate(ticketId);
+    }
+  };
+
   const getStatusConfig = (status) => {
     const configs = {
       confirmed: {
-        label: "Đã xác nhận",
+        label: "Đã đặt",
         color: "bg-green-100 text-green-700 border-green-200",
         icon: <Check className="w-4 h-4" />,
       },
@@ -121,8 +153,8 @@ const UserTickets = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4 ml-2">
+      <div className="max-w-7xl mx-auto ">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -138,7 +170,7 @@ const UserTickets = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+        {/* <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
             <div className="flex items-center space-x-4">
               <Filter className="w-5 h-5 text-gray-500" />
@@ -166,7 +198,7 @@ const UserTickets = () => {
               />
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Tickets Grid */}
         {filteredTickets.length === 0 ? (
@@ -208,7 +240,7 @@ const UserTickets = () => {
                           <div className="flex items-center space-x-1">
                             {statusConfig.icon}
                             <span className="text-sm font-medium">
-                              {statusConfig.label}
+                              {ticket.status}
                             </span>
                           </div>
                         </div>
@@ -300,11 +332,22 @@ const UserTickets = () => {
                       </div>
                     </div>
 
-                    {/* Booking Date */}
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <div className="text-xs text-gray-500 text-center">
+                    {/* Booking Date and Cancel Button */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                      <div className="text-xs text-gray-500">
                         Đặt vé lúc: {formatDateTime(ticket.createdAt)}
                       </div>
+                      {ticket.status === "confirmed" ||
+                      ticket.status === "Đã đặt" ? (
+                        <button
+                          onClick={() => handleCancelTicket(ticket._id)}
+                          className="flex items-center space-x-1 px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition"
+                          disabled={cancelMutation.isLoading}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Hủy vé</span>
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -313,7 +356,7 @@ const UserTickets = () => {
           </div>
         )}
 
-        {/* Load More Button */}
+        {/* Pagination */}
         <Pagination totalPages={totalPages} handlePageClick={handlePageClick} />
       </div>
     </div>
