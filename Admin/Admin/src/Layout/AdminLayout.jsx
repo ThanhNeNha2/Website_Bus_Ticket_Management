@@ -8,9 +8,8 @@ import Sidebar from "../Pages/Admin/Sidebar";
 const AdminLayout = () => {
   return (
     <div className="">
-      <Header />
       <main>
-        <div className="flex mt-16 ">
+        <div className="flex  ">
           <Sidebar />
           <Outlet /> {/* Hiển thị các route con */}
         </div>
