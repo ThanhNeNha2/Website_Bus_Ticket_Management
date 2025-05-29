@@ -12,20 +12,28 @@ import {
   DollarSign,
 } from "lucide-react";
 import { parseISO, startOfDay, endOfDay } from "date-fns";
-
 // Utils
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN");
 };
-
 const isPromotionActive = (promotion) => {
   const now = new Date();
   const start = startOfDay(parseISO(promotion.startDate));
   const end = endOfDay(parseISO(promotion.endDate));
 
+  console.log("Checking promotion:", promotion.code);
+  console.log("Current time:", now);
+  console.log("Start time:", start);
+  console.log("End time:", end);
+  console.log("Status:", promotion.status);
+
   const isWithinTimeRange = now >= start && now <= end;
   const isStatusActive = promotion.status === "Active";
+
+  console.log("Within time range:", isWithinTimeRange);
+  console.log("Status active:", isStatusActive);
+  console.log("Final result:", isStatusActive && isWithinTimeRange);
 
   return isStatusActive && isWithinTimeRange;
 };
@@ -40,19 +48,28 @@ const fetchPromotions = async ({ page = 1, limit = 6 }) => {
     throw new Error(res.data.message || "Không thể tải danh sách mã giảm giá.");
   }
 
-  // Lọc chỉ lấy những mã còn hoạt động
-  const allPromotions = res.data.data.promotions || [];
-  const activePromotions = allPromotions.filter((promotion) =>
-    isPromotionActive(promotion)
-  );
-
   return {
-    promotions: activePromotions,
-    totalItems: activePromotions.length,
+    promotions: res.data.data.promotions || [],
+    totalItems: res.data.data.total || 1,
   };
 };
 
 // Components
+const PromotionStatus = ({ isActive }) => {
+  const statusClass = isActive
+    ? "bg-red-100 text-red-800"
+    : "bg-green-100 text-green-800";
+  const statusText = isActive ? "Hết hạn" : "Đang hoạt động";
+
+  return (
+    <div
+      className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}
+    >
+      {statusText}
+    </div>
+  );
+};
+
 const PromotionInfo = ({ promotion }) => {
   const DiscountIcon =
     promotion.discountType === "Percentage" ? Percent : DollarSign;
@@ -61,13 +78,13 @@ const PromotionInfo = ({ promotion }) => {
   return (
     <div className="grid grid-cols-2 gap-3 mb-4">
       <div className="flex items-center text-sm text-gray-700">
-        <DiscountIcon size={16} className="mr-2 text-green-500" />
+        <DiscountIcon size={16} className="mr-2 text-blue-500" />
         <span>
           {promotion.discountValue} {discountText}
         </span>
       </div>
       <div className="flex items-center text-sm text-gray-700">
-        <Users size={16} className="mr-2 text-green-500" />
+        <Users size={16} className="mr-2 text-blue-500" />
         <span>
           {promotion.usedCount || 0}/{promotion.maxUses || "∞"}
         </span>
@@ -92,8 +109,13 @@ const PromotionDates = ({ startDate, endDate }) => (
 );
 
 const PromotionCard = ({ promotion }) => {
+  const isActive = isPromotionActive(promotion);
+  const borderColor = isActive ? "border-l-green-500" : "border-l-red-500";
+
   return (
-    <div className="bg-white border-l-4 border-l-green-500 rounded-lg shadow-md p-5 transition-all hover:shadow-lg">
+    <div
+      className={`bg-white border-l-4 ${borderColor} rounded-lg shadow-md p-5 transition-all hover:shadow-lg`}
+    >
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
@@ -102,9 +124,7 @@ const PromotionCard = ({ promotion }) => {
             {promotion.description || "Không có mô tả"}
           </p>
         </div>
-        <div className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          Đang hoạt động
-        </div>
+        <PromotionStatus isActive={isActive} />
       </div>
 
       {/* Info */}
@@ -125,11 +145,10 @@ const EmptyState = () => (
       <Tag size={32} className="text-gray-500" />
     </div>
     <h3 className="text-xl font-medium text-gray-800 mb-2">
-      Không có mã khuyến mãi hoạt động
+      Chưa có mã khuyến mãi
     </h3>
     <p className="text-gray-600 mb-6">
-      Hiện tại không có mã khuyến mãi nào đang hoạt động. Hãy tạo mã mới hoặc
-      kiểm tra lại thời hạn.
+      Bạn chưa tạo mã khuyến mãi nào. Hãy thêm mã mới để bắt đầu.
     </p>
     <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition">
       Thêm mã khuyến mãi
@@ -152,14 +171,12 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const PageHeader = ({ activeCount }) => (
+const PageHeader = () => (
   <div className="flex justify-between items-center mb-6">
     <div>
-      <h2 className="text-3xl font-semibold text-gray-800">
-        Mã khuyến mãi hoạt động
-      </h2>
+      <h2 className="text-3xl font-semibold text-gray-800">Mã khuyến mãi</h2>
       <p className="text-gray-600 mt-1">
-        Hiện có {activeCount} mã giảm giá đang hoạt động
+        Quản lý và xem tất cả các mã giảm giá của bạn
       </p>
     </div>
   </div>
@@ -179,7 +196,7 @@ const InfoPromotion = () => {
     queryFn: () => fetchPromotions({ page: currentPage, limit: itemsPerPage }),
   });
 
-  const { promotions = [], totalItems = 0 } = data;
+  const { promotions = [], totalItems = 1 } = data;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handlePageClick = (event) => {
@@ -188,7 +205,7 @@ const InfoPromotion = () => {
 
   return (
     <div className="flex-1 p-6 bg-gray-50 min-h-screen">
-      <PageHeader activeCount={totalItems} />
+      <PageHeader />
 
       {error && <ErrorMessage error={error} />}
 
@@ -204,7 +221,7 @@ const InfoPromotion = () => {
             ))}
           </div>
 
-          {totalPages > 1 && (
+          {promotions.length > 2 && (
             <Pagination
               totalPages={totalPages}
               handlePageClick={handlePageClick}
