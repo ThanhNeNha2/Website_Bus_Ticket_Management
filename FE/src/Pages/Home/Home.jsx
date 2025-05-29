@@ -55,7 +55,7 @@ const Home = () => {
           </div>
         </div>
       </div>
-      <TicketPricing />
+      {/* <TicketPricing /> */}
       <ContactInfo />
       <FAQ />
     </div>

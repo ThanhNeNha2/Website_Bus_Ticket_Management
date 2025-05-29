@@ -122,6 +122,14 @@ const ListRoutertrip = () => {
 
   const carTypes = ["SIT", "BED"];
 
+  // Lọc các chuyến đi chưa qua ngày hiện tại
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Đặt giờ về 00:00 để so sánh ngày
+  const upcomingTrips = trips.filter((trip) => {
+    const departureDate = new Date(trip.departureDate);
+    return departureDate >= today;
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
       {/* Hero Section */}
@@ -292,12 +300,12 @@ const ListRoutertrip = () => {
         )}
 
         {/* No Results */}
-        {!isLoading && !error && trips.length === 0 && (
+        {!isLoading && !error && upcomingTrips.length === 0 && (
           <div className="text-center py-20">
             <div className="bg-gray-800/50 rounded-xl p-8 max-w-md mx-auto border border-gray-700">
               <FaRoute className="text-6xl text-gray-600 mx-auto mb-4" />
               <p className="text-gray-400 text-lg">
-                Không tìm thấy chuyến xe nào.
+                Không tìm thấy chuyến xe nào trong tương lai.
               </p>
               <p className="text-gray-500 text-sm mt-2">
                 Thử thay đổi điều kiện tìm kiếm của bạn
@@ -307,7 +315,7 @@ const ListRoutertrip = () => {
         )}
 
         {/* Trip Results */}
-        {!isLoading && !error && trips.length > 0 && (
+        {!isLoading && !error && upcomingTrips.length > 0 && (
           <div className="flex flex-col lg:flex-row gap-8 mt-5">
             {/* Trip Grid */}
             <div className="flex-1">
@@ -316,12 +324,12 @@ const ListRoutertrip = () => {
                   Kết quả tìm kiếm
                 </h2>
                 <p className="text-gray-400">
-                  Tìm thấy {totalItems} chuyến xe phù hợp
+                  Tìm thấy {upcomingTrips.length} chuyến xe phù hợp
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {trips.map((trip) => (
+                {upcomingTrips.map((trip) => (
                   <div
                     key={trip._id}
                     className="group bg-gray-800/50 rounded-2xl overflow-hidden border border-gray-700 hover:border-blue-500/50 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
@@ -392,7 +400,7 @@ const ListRoutertrip = () => {
         )}
 
         {/* Pagination */}
-        {!isLoading && !error && trips.length > 0 && (
+        {!isLoading && !error && upcomingTrips.length > 0 && (
           <div className="mt-12">
             <Pagination
               totalPages={totalPages}

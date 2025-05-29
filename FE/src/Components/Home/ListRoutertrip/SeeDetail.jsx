@@ -10,7 +10,7 @@ import {
   Badge,
   Calendar,
 } from "lucide-react";
-
+import { format } from "date-fns";
 const SeeDetail = ({ trips }) => {
   const [selectedTab, setSelectedTab] = useState("Giới thiệu");
 
@@ -212,6 +212,19 @@ const SeeDetail = ({ trips }) => {
                   </div>
                 </div>
 
+                <div className="flex items-start space-x-4 p-2 bg-red-50 rounded-xl border border-red-100 hover:bg-red-100 transition-colors duration-300">
+                  <div className="bg-red-500 p-2 rounded-lg">
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 mb-1">Ngày đi</p>
+                    <p className="text-gray-700">
+                      {trips?.departureDate
+                        ? format(new Date(trips.departureDate), "dd/MM/yyyy")
+                        : "Chưa có thông tin"}
+                    </p>
+                  </div>
+                </div>
                 <div className="flex items-start space-x-4 p-2 bg-yellow-50 rounded-xl border border-yellow-100 hover:bg-yellow-100 transition-colors duration-300">
                   <div className="bg-yellow-500 p-2 rounded-lg">
                     <CreditCard className="w-5 h-5 text-white" />
