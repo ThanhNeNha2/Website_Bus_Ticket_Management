@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Ticket = require("../models/Ticket");
+const Promotion = require("../models/Promotion");
+
 const Trip = require("../models/Trip");
 const Car = require("../models/Car");
 const { v4: uuidv4 } = require("uuid");
@@ -7,131 +9,104 @@ const { sendEmail } = require("../service/nodeMailer");
 
 // Create a new ticket
 const createTicket = async (req, res) => {
+  const session = await mongoose.startSession(); // Bắt đầu transaction
+  session.startTransaction();
+
   try {
-    const { tripId, ticketPrice, promotionCode } = req.body;
+    const { tripId, ticketPrice, promotionCode, numberOfTickets } = req.body;
     const user = req.user; // Giả định req.user từ middleware xác thực
-    console.log("tripId", tripId);
-    console.log("ticketPrice", ticketPrice);
 
     // Kiểm tra dữ liệu đầu vào
-    if (!tripId || !ticketPrice) {
+    if (!tripId || !ticketPrice || !numberOfTickets || numberOfTickets < 1) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         errCode: 1,
-        message: "Missing required fields",
+        message: "Thiếu trường bắt buộc hoặc số lượng vé không hợp lệ",
       });
     }
 
     // Kiểm tra thông tin user
     if (!user || !user.id || !user.role) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(403).json({
         errCode: 1,
-        message: "No user information or role provided",
+        message: "Không có thông tin người dùng hoặc vai trò",
       });
     }
 
     // Kiểm tra tripId hợp lệ
-    const trip = await Trip.findById(tripId);
+    const trip = await Trip.findById(tripId).session(session);
     if (!trip) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({
         errCode: 1,
-        message: "Trip not found",
+        message: "Không tìm thấy chuyến xe",
       });
     }
 
     // Kiểm tra carId từ trip
-    const car = await Car.findById(trip.carId);
+    const car = await Car.findById(trip.carId).session(session);
     if (!car) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({
         errCode: 1,
-        message: "Car not found",
+        message: "Không tìm thấy xe",
       });
     }
 
-    // Kiểm tra số ghế còn lại
-    if (trip.seatsAvailable <= 0) {
+    // Kiểm tra và giảm số ghế còn lại
+    const updatedTrip = await Trip.findOneAndUpdate(
+      { _id: tripId, seatsAvailable: { $gte: numberOfTickets } },
+      { $inc: { seatsAvailable: -numberOfTickets } },
+      { new: true, session }
+    );
+    if (!updatedTrip) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         errCode: 1,
-        message: "No seats available for this trip",
+        message: `Không đủ ${numberOfTickets} ghế trống cho chuyến xe này`,
       });
     }
 
-    // Xử lý mã giảm giá
-    let finalTicketPrice = ticketPrice;
+    // Xử lý mã giảm giá (chỉ tăng usedCount nếu có)
     let appliedPromotion = null;
     if (promotionCode) {
-      const promotion = await Promotion.findOne({ code: promotionCode });
-      if (!promotion) {
-        return res.status(400).json({
-          errCode: 1,
-          message: "Invalid promotion code",
-        });
+      const promotion = await Promotion.findOne({
+        code: promotionCode,
+      }).session(session);
+      if (promotion) {
+        promotion.usedCount += 1;
+        await promotion.save({ session });
+        appliedPromotion = promotion;
       }
-
-      // Kiểm tra trạng thái và thời gian hiệu lực
-      const now = new Date();
-      if (
-        promotion.status !== "Active" ||
-        now < promotion.startDate ||
-        now > promotion.endDate
-      ) {
-        return res.status(400).json({
-          errCode: 1,
-          message: "Promotion is not active or has expired",
-        });
-      }
-
-      // Kiểm tra maxUses
-      if (promotion.maxUses > 0 && promotion.usedCount >= promotion.maxUses) {
-        return res.status(400).json({
-          errCode: 1,
-          message: "Promotion has reached maximum usage",
-        });
-      }
-
-      // Kiểm tra applicableTrips
-      if (
-        promotion.applicableTrips.length > 0 &&
-        !promotion.applicableTrips.includes(tripId)
-      ) {
-        return res.status(400).json({
-          errCode: 1,
-          message: "Promotion is not applicable to this trip",
-        });
-      }
-
-      // Tính giá vé sau giảm giá
-      if (promotion.discountType === "Percentage") {
-        finalTicketPrice = ticketPrice * (1 - promotion.discountValue / 100);
-      } else if (promotion.discountType === "Fixed") {
-        finalTicketPrice = ticketPrice - promotion.discountValue;
-        if (finalTicketPrice < 0) finalTicketPrice = 0; // Đảm bảo giá không âm
-      }
-
-      // Tăng usedCount
-      promotion.usedCount += 1;
-      await promotion.save();
-      appliedPromotion = promotion;
     }
 
-    // Tạo ticket mới
-    const ticket = new Ticket({
-      ticketCode: `TICKET-${uuidv4().slice(0, 8)}`,
-      tripId,
-      carId: trip.carId,
-      userId: user.id,
-      ticketPrice: finalTicketPrice,
-      status: "Đã đặt",
-    });
+    // Tạo nhiều vé theo numberOfTickets
+    const tickets = [];
+    for (let i = 0; i < numberOfTickets; i++) {
+      const ticket = new Ticket({
+        ticketCode: `TICKET-${uuidv4().slice(0, 8)}`,
+        tripId,
+        carId: trip.carId,
+        userId: user.id,
+        ticketPrice, // Sử dụng ticketPrice từ FE (đã tính giảm giá)
+        promotionCode: appliedPromotion ? appliedPromotion.code : null,
+        status: "Đã đặt",
+      });
+      await ticket.save({ session });
+      tickets.push(ticket);
+    }
 
-    // Giảm seatsAvailable
-    trip.seatsAvailable -= 1;
-    await trip.save();
-
-    // Lưu ticket
-    await ticket.save();
-
-    // Populate dữ liệu
-    const populatedTicket = await Ticket.findById(ticket._id)
+    // Populate dữ liệu cho vé cuối cùng (hoặc tất cả vé nếu cần)
+    const populatedTickets = await Ticket.find({
+      _id: { $in: tickets.map((t) => t._id) },
+    })
+      .session(session)
       .populate({
         path: "tripId",
         select:
@@ -144,49 +119,38 @@ const createTicket = async (req, res) => {
       .populate("carId", "nameCar licensePlate")
       .populate("userId", "username email");
 
-    // console.log(" check thong tin tạo ra ticket  ", ticket);
-    // console.log(" check thong tin tạo ra populatedTicket  ", populatedTicket);
-    console.log(
-      " check thong tin populatedTicket.tripId   ",
-      populatedTicket.tripId.userId
-    );
-    console.log(
-      " check thong tin  nguoi mua ve  ",
-      populatedTicket.userId.username
-    );
-    console.log(
-      " check thong tin chuyen xe   ",
-      populatedTicket.tripId.pickupProvince,
-      " và đến ",
-      populatedTicket.tripId.dropOffProvince
-    );
-    console.log(" check thong tin  ma ve    ", populatedTicket.ticketCode);
-    console.log(" check thong tin gia    ", populatedTicket.ticketPrice);
-    console.log(
-      " check thong tin ngay gio    ",
-      populatedTicket.tripId.departureTime
-    );
-    console.log(
-      " check thong tin gmail nguoi mua     ",
-      populatedTicket.userId.email
-    );
-    const tripName = `${populatedTicket.tripId.pickupProvince} và đến ${populatedTicket.tripId.dropOffProvince}`;
+    // Gửi email thông báo cho mỗi vé
+    const tripName = `${populatedTickets[0].tripId.pickupProvince} đến ${populatedTickets[0].tripId.dropOffProvince}`;
+    for (const populatedTicket of populatedTickets) {
+      try {
+        await sendEmail(
+          populatedTicket.userId.username,
+          populatedTicket.userId.username,
+          tripName,
+          populatedTicket.ticketCode,
+          populatedTicket.ticketPrice,
+          populatedTicket.tripId.arrivalDate,
+          populatedTicket.tripId.departureTime,
+          populatedTicket.userId.email
+        );
+      } catch (emailError) {
+        console.error(
+          `Lỗi gửi email cho vé ${populatedTicket.ticketCode}:`,
+          emailError
+        );
+        // Không rollback transaction vì vé đã tạo thành công
+      }
+    }
 
-    await sendEmail(
-      populatedTicket.tripId.userId.username,
-      populatedTicket.userId.username,
-      tripName,
-      populatedTicket.ticketCode,
-      populatedTicket.ticketPrice,
-      populatedTicket.tripId.arrivalDate,
-      populatedTicket.tripId.departureTime,
-      populatedTicket.userId.email
-    );
+    // Commit transaction
+    await session.commitTransaction();
+    session.endSession();
 
+    // Trả về phản hồi
     return res.status(201).json({
       errCode: 0,
-      message: "Ticket created successfully",
-      ticket: populatedTicket,
+      message: `Tạo ${numberOfTickets} vé thành công`,
+      tickets: populatedTickets,
       appliedPromotion: appliedPromotion
         ? {
             code: appliedPromotion.code,
@@ -196,10 +160,13 @@ const createTicket = async (req, res) => {
         : null,
     });
   } catch (error) {
-    console.error("Error creating ticket:", error);
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Lỗi khi tạo vé:", error);
     return res.status(500).json({
       errCode: 1,
-      message: "Internal server error",
+      message: "Lỗi máy chủ nội bộ",
+      error: error.message,
     });
   }
 };

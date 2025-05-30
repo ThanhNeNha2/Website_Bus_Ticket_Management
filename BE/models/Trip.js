@@ -109,12 +109,12 @@ const tripSchema = new mongoose.Schema(
     // Thời gian đi
     departureTime: { type: String, required: true },
 
-    // Ngày di
+    // Ngày đến
     arrivalDate: {
       type: Date,
       required: true,
     },
-    // Ngày đến
+    // Ngày di
     departureDate: {
       type: Date,
       required: true,
@@ -132,7 +132,7 @@ const tripSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Đã đến", "Đã xuất phát", "Chưa xuất phát", "Đã hủy"],
-      default: "Scheduled",
+      default: "Chưa xuất phát",
     },
     totalSeats: {
       type: Number,

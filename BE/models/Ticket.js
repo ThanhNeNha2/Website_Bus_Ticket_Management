@@ -13,6 +13,9 @@ const ticketSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    PromotionCode: {
+      type: String,
+    },
     ticketPrice: { type: Number, required: true, min: 0 },
     status: {
       type: String,

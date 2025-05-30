@@ -7,6 +7,7 @@ const {
   getPromotionById,
   updatePromotion,
   deletePromotion,
+  findUsablePromotions,
 } = require("../controllers/promotionController");
 const {
   verifyTokenAndRoleAuth,
@@ -16,6 +17,7 @@ const {
 
 router.post("/promotions", verifyAdminOnly(), createPromotion);
 router.get("/promotions", verifyToken, getAllPromotions);
+router.post("/findUsablePromotions", verifyToken, findUsablePromotions);
 router.get("/promotions/:id", verifyToken, getPromotionById);
 router.put("/promotions/:id", verifyAdminOnly(), updatePromotion);
 router.delete("/promotions/:id", verifyAdminOnly(), deletePromotion);

@@ -289,6 +289,67 @@ const getAllPromotions = async (req, res) => {
   }
 };
 
+const findUsablePromotions = async (req, res) => {
+  try {
+    const { code } = req.body;
+    // console.log("🔍 Mã khuyến mãi được kiểm tra: ", code);
+
+    // Kiểm tra đầu vào
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng nhập mã khuyến mãi.",
+      });
+    }
+
+    // Tìm mã khuyến mãi trong cơ sở dữ liệu
+    const promotion = await Promotion.findOne({ code });
+
+    if (!promotion) {
+      return res.status(404).json({
+        success: false,
+        message: "Mã khuyến mãi không tồn tại.",
+      });
+    }
+
+    // Kiểm tra hạn sử dụng
+    const currentDate = new Date();
+    if (promotion.status === "Hết hạn" || promotion.endDate < currentDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Mã khuyến mãi đã hết hạn.",
+      });
+    }
+
+    // Kiểm tra số lượt sử dụng
+    if (promotion.maxUses !== 0 && promotion.usedCount >= promotion.maxUses) {
+      return res.status(400).json({
+        success: false,
+        message: "Mã khuyến mãi đã được sử dụng hết số lượt cho phép.",
+      });
+    }
+
+    // Trả về thông tin mã hợp lệ
+    return res.status(200).json({
+      success: true,
+      message: "Mã khuyến mãi hợp lệ.",
+      data: {
+        code: promotion.code,
+        discountType: promotion.discountType,
+        discountValue: promotion.discountValue,
+        startDate: promotion.startDate,
+        endDate: promotion.endDate,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Lỗi khi kiểm tra mã khuyến mãi:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.",
+    });
+  }
+};
+
 // Get a single promotion by ID
 const getPromotionById = async (req, res) => {
   try {
@@ -619,4 +680,5 @@ module.exports = {
   getPromotionById,
   updatePromotion,
   deletePromotion,
+  findUsablePromotions,
 };
