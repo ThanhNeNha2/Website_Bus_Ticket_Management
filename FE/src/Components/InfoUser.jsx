@@ -82,8 +82,6 @@ const InfoUser = () => {
     }
   }, [infouserGet]);
 
-  console.log("formData:", formData); // Debug
-
   if (isLoading)
     return (
       <div className="flex items-center justify-center h-full">

@@ -16,18 +16,24 @@ const fetchTrip = async (id) => {
 
   return res.data.trip || {};
 };
-
 const fetchPromotion = async (code) => {
   const token = localStorage.getItem("accessToken");
   if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
 
-  const res = await api.get(`/promotions?code=${code}`);
-  if (res.data.errCode !== 0)
-    throw new Error(res.data.message || "Không thể tải thông tin khuyến mãi.");
-
-  return res.data || {};
+  try {
+    const response = await api.post(`/findUsablePromotions`, { code });
+    console.log("✅ Promotion response:", response.data);
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      console.log("❌ API error:", error.response.data);
+      return error.response.data; // ví dụ: { success: false, message: "Promotion code does not exist" }
+    } else {
+      console.log("❌ Request failed:", error.message);
+      throw error;
+    }
+  }
 };
-
 const createTicket = async (ticketData) => {
   const token = localStorage.getItem("accessToken");
   if (!token) throw new Error("Không có token. Vui lòng đăng nhập lại.");
@@ -55,6 +61,15 @@ const BookTicket = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [codeSale, setCodeSale] = useState("");
+  const [promotionCode, setPromotionCode] = useState("");
+
+  const [numberOfTickets, setNumberOfTickets] = useState(1);
+  const [priceSale, setPriceSale] = useState(0);
+  const [errors, setErrors] = useState({});
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Lấy userId từ localStorage
   let userId;
   try {
@@ -80,7 +95,7 @@ const BookTicket = () => {
       queryClient.invalidateQueries(["trips"]);
       setSubmitStatus("success");
       setTimeout(() => {
-        navigate("/ticket-history");
+        navigate("/infoTicket");
       }, 3000);
     },
     onError: (error) => {
@@ -91,13 +106,6 @@ const BookTicket = () => {
       setSubmitStatus("error");
     },
   });
-
-  const [codeSale, setCodeSale] = useState("");
-  const [numberOfTickets, setNumberOfTickets] = useState(1);
-  const [priceSale, setPriceSale] = useState(0);
-  const [errors, setErrors] = useState({});
-  const [submitStatus, setSubmitStatus] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Kiểm tra quyền truy cập sau khi gọi Hook
   const isAuthorized =
@@ -178,46 +186,47 @@ const BookTicket = () => {
     e.preventDefault();
     if (!validateBooking()) return;
 
-    try {
-      let finalPrice = tripData.price * numberOfTickets;
+    let finalPrice = tripData.price * numberOfTickets;
 
-      if (codeSale.trim()) {
-        const res = await fetchPromotion(codeSale);
-        if (res.errCode !== 0) {
-          throw new Error(res.message || "Mã khuyến mãi không hợp lệ.");
-        }
-        if (res.data.promotions[0].discountType === "Percentage") {
-          finalPrice *= 1 - res.data.promotions[0].discountValue / 100;
-          setErrors((prev) => ({
-            ...prev,
-            promoCode: "Áp mã giảm giá thành công.",
-          }));
-        } else if (res.data.promotions[0].discountType === "Fixed") {
-          finalPrice -= res.data.promotions[0].discountValue;
-          setErrors((prev) => ({
-            ...prev,
-            promoCode: "Áp mã giảm giá thành công.",
-          }));
-        }
+    if (codeSale.trim()) {
+      const res = await fetchPromotion(codeSale);
+      console.log("check promo", res);
+      const promo = res.data;
+
+      if (res.success === false) {
+        setErrors((prev) => ({
+          ...prev,
+          promoCode: res.message || "Mã khuyến mãi không hợp lệ.",
+        }));
+        return; // Không tiếp tục nữa nếu mã khuyến mãi sai
       }
 
-      setPriceSale(finalPrice);
-      setIsModalOpen(true); // Mở modal xác nhận
-    } catch (error) {
-      console.error("Lỗi khi lấy thông tin khuyến mãi:", error.message);
+      // Áp dụng giảm giá
+      if (promo.discountType === "Percentage") {
+        finalPrice *= 1 - promo.discountValue / 100;
+      } else if (promo.discountType === "Fixed") {
+        finalPrice -= promo.discountValue;
+      }
+
+      // Cập nhật trạng thái
       setErrors((prev) => ({
         ...prev,
-        promoCode: "Mã code sai hoặc không tồn tại.",
+        promoCode: "Áp mã giảm giá thành công.",
       }));
+      setPromotionCode(codeSale);
     }
+
+    setPriceSale(finalPrice);
+    setIsModalOpen(true);
   };
 
   // Handle confirm booking
   const handleConfirmBooking = () => {
     const ticketData = {
       tripId: id,
-
+      promotionCode,
       ticketPrice: priceSale,
+      numberOfTickets,
     };
 
     bookTicketMutation.mutate(ticketData);
@@ -471,7 +480,6 @@ const BookTicket = () => {
                       value={numberOfTickets}
                       onChange={handleNumberOfTicketsChange}
                       min="1"
-                      max={trip.seatsAvailable}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.numberOfTickets
                           ? "border-red-500"
