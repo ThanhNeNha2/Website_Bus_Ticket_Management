@@ -30,6 +30,6 @@ router.get("/myTickets", verifyToken, getMyTickets);
 router.put("/tickets/:id", verifyAdminOnly(), updateTicket);
 
 // Route: Xóa xe ( chỉ có ADMIN VÀ GARAGE mới xóa được xe - đã check id )
-router.delete("/tickets/:id", verifyAdminOnly(), deleteTicket);
+router.delete("/tickets/:id", verifyToken, deleteTicket);
 
 module.exports = router;

@@ -456,21 +456,11 @@ const deleteTicket = async (req, res) => {
       });
     }
 
-    // Kiểm tra quyền: Chỉ chủ vé hoặc GARAGE/ADMIN được xóa
-    const isOwner = ticket.userId.toString() === user.id;
-    const hasPermission = ["GARAGE", "ADMIN"].includes(user.role);
-    if (!isOwner && !hasPermission) {
-      return res.status(403).json({
-        errCode: 1,
-        message: "You do not have permission to delete this ticket",
-      });
-    }
-
-    // Chỉ cho phép xóa nếu trạng thái là Booked hoặc Canceled
-    if (!["Booked", "Canceled"].includes(ticket.status)) {
+    // Chỉ cho phép hủy nếu trạng thái là Đã đặt
+    if (ticket.status !== "Đã đặt") {
       return res.status(400).json({
         errCode: 1,
-        message: "Cannot delete ticket in Confirmed or Used status",
+        message: "Only booked tickets can be canceled",
       });
     }
 
@@ -481,15 +471,16 @@ const deleteTicket = async (req, res) => {
       await trip.save();
     }
 
-    // Xóa ticket
-    await ticket.deleteOne();
+    // Cập nhật trạng thái thành "Đã hủy"
+    ticket.status = "Đã hủy";
+    await ticket.save();
 
     return res.status(200).json({
       errCode: 0,
-      message: "Ticket deleted successfully",
+      message: "Ticket canceled successfully",
     });
   } catch (error) {
-    console.error("Error deleting ticket:", error);
+    console.error("Error canceling ticket:", error);
     return res.status(500).json({
       errCode: 1,
       message: "Internal server error",
