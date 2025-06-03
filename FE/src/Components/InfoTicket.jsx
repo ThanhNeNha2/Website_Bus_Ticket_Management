@@ -2,19 +2,11 @@ import React, { useState } from "react";
 import {
   Ticket,
   MapPin,
-  Clock,
   Calendar,
   Car,
-  CreditCard,
   Check,
   X,
-  AlertCircle,
-  Download,
-  QrCode,
-  Phone,
-  Mail,
-  Filter,
-  Search,
+  AlertTriangle,
   Trash2,
 } from "lucide-react";
 import { api } from "../Util/axios";
@@ -103,30 +95,30 @@ const UserTickets = () => {
 
   const getStatusConfig = (status) => {
     const configs = {
-      confirmed: {
+      "Đã đặt": {
         label: "Đã đặt",
         color: "bg-green-100 text-green-700 border-green-200",
         icon: <Check className="w-4 h-4" />,
       },
-      pending: {
-        label: "Chờ xác nhận",
-        color: "bg-yellow-100 text-yellow-700 border-yellow-200",
-        icon: <Clock className="w-4 h-4" />,
-      },
-      cancelled: {
+      "Đã hủy": {
         label: "Đã hủy",
         color: "bg-red-100 text-red-700 border-red-200",
         icon: <X className="w-4 h-4" />,
       },
-      completed: {
-        label: "Hoàn thành",
+      "Hết hiệu lực": {
+        label: "Hết hiệu lực",
         color: "bg-blue-100 text-blue-700 border-blue-200",
         icon: <Check className="w-4 h-4" />,
       },
+      unknown: {
+        label: "Không rõ",
+        color: "bg-gray-100 text-gray-700 border-gray-200",
+        icon: <AlertTriangle className="w-4 h-4" />,
+      },
     };
-    return configs[status] || configs.pending;
-  };
 
+    return configs[status] || configs["unknown"];
+  };
   const filteredTickets = tickets.filter((ticket) => {
     const matchesStatus =
       filterStatus === "all" || ticket.status === filterStatus;
@@ -168,37 +160,6 @@ const UserTickets = () => {
             Quản lý và theo dõi tất cả vé xe của bạn
           </p>
         </div>
-
-        {/* Filters */}
-        {/* <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Filter className="w-5 h-5 text-gray-500" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="confirmed">Đã xác nhận</option>
-                <option value="pending">Chờ xác nhận</option>
-                <option value="cancelled">Đã hủy</option>
-                <option value="completed">Hoàn thành</option>
-              </select>
-            </div>
-
-            <div className="relative">
-              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo mã vé hoặc tuyến đường..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full lg:w-80"
-              />
-            </div>
-          </div>
-        </div> */}
 
         {/* Tickets Grid */}
         {filteredTickets.length === 0 ? (
